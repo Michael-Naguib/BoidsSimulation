@@ -1,7 +1,7 @@
 '''
 # Swarm
 - Code By Michael Sherif Naguib
-- license: GNU GPLv3     see (https://choosealicense.com/licenses/gpl-3.0/) for specifics
+- license: MIT
 - Date: 6/13/19
 - @University of Tulsa
 ## Description:
