@@ -9,8 +9,42 @@
 
 
 '''
+#imports
+from tkinter import *
+from BoidSwarm import BoidSwarm
+import time
+#main program
+if __name__ == "__main__":
+    #=== Settings
+    HEIGHT = 300
+    WIDTH = round(HEIGHT * 1.6180339) # preserve a nice aspect ratio by using phi= THE GOLDEN RATIO (one of my favorite numbers)
+    QUANTITY=300
 
-pass
+    #=== Setup the Graphics
+    root = Tk()
+    #root.overrideredirect(True)
+    root.geometry('%dx%d+%d+%d' % (WIDTH, HEIGHT, (root.winfo_screenwidth() - WIDTH) / 2, (root.winfo_screenheight() - HEIGHT) / 2))
+    root.bind_all('<Escape>', lambda event: event.widget.quit())
+    graph = Canvas(root, width=WIDTH, height=HEIGHT, background='white')
+    graph.pack()
+
+    #=== Setup the swarm
+    mySwarm = BoidSwarm(graph,WIDTH,HEIGHT)
+    mySwarm.setup(quantity=QUANTITY)#Is a custom over-ridable method for configuring different types of swarms
+    mySwarm.init_kinematics()#initilizes the velocities and positions
+
+    #=== Enter the main loop
+    while True:
+        graph.delete(ALL)#clear the screen
+        mySwarm.update_boid_positions()#runs the main calculation for the boid positions
+        mySwarm.draw_swarm()#is using the reference to the graph it was passed durring init
+        graph.update()#update the screen
+        #time.sleep(1000)
+        #print(mySwarm.boid_list[0])
+
+
+
+
 
 '''
     example: Update Rule settings for agent agent interactions:

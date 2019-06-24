@@ -19,13 +19,15 @@ import time
 import arcade
 import uuid
 import math
+from Boid import Boid
 
 #Helps create and run a boid swarm
 class BoidSwarm():
     #=== internal setup for this class do not modify
-    def __init__(self,max_x,max_y):
+    def __init__(self,tkinter_canvas,max_x,max_y):
         '''
         :description: internal class initialization for the swarm
+        :param tkinter_canvas: is the reference to the tkinter canvas that the boids will be drawn on
         :param max_x: the maximum world bound in the x direction... ( boid x cordinates always on [0,max_x] )
         :param max_y: the maximum world bound in the y direction... ( boid y cordinates always on [0,max_y] )
 
@@ -45,29 +47,31 @@ class BoidSwarm():
         #Stores the modular wrapping bounds for the spherical surface  (modular 2d space) assumes min_x,min_y = 0
         self.max_y = max_y
         self.max_x = max_x
+        #Stores the tkinter canvas instance
+        self.tkinter_canvas = tkinter_canvas
         #Stores the Markov Matricies for the relationships between each Update Rule hyper-parameters between every boid (technically its not quite a markov matrix ... as sigma prob != 1 necessarily but it does capture relationship informaiton
-        self.markov_tensor=[]# store each matrix for each function in here ... --> order corresponds to the functions prder in update_rules
+        #self.markov_tensor=[]# store each matrix for each function in here ... --> order corresponds to the functions prder in update_rules
         #Stores the Partitioning scheme for each Markov Matrix (i.e  indicies a thru b  have same update rule for [(rnage1,range2...)] for rule P
         #         [ scheme for function 0, scheme for function 1,...]  where a scheme ==> [ {[a,b] ,([r0,r1],[r2,r3],...])} , {[c,d] ,([r0,r1],[r2,r3],...])},... ]  ==> that is a scheme for 1 function
         #         a<b<c<d ==> they are in order ... every partition must be accounted for...
-        self.markov_partitioning_tensor=[]
+        #self.markov_partitioning_tensor=[]
 
-    #=== (override setup!! or use this default this is where you build custom types of swarms...)
-    def setup(self):
+    #=== (OVERRIDE) setup!! or use this default this is where you build custom types of swarms...)
+    def setup(self,quantity=100):
         '''
         :description: Sets up the initial state of the swarm i.e how many boids configured  color ... etc... using [...] update rules and hyper parameters
         '''
         #Add the desired update rules (functions  accept boidlist as param ... returns velocity update ... use a lambda abstraction to bind hyper-parameters
         cohere = lambda boid_list: BoidSwarm.COHESION(boid_list,percent_strength=0.01,modular_space_params=(self.max_x,self.max_y))
-        seperate = lambda boid_list: BoidSwarm.SEPARATION(boid_list, percent_strength=0.01,modular_space_params=(self.max_x, self.max_y))
+        seperate = lambda boid_list: BoidSwarm.SEPARATION(boid_list, percent_influence_range=0.1,modular_space_params=(self.max_x, self.max_y))
         align = lambda boid_list: BoidSwarm.ALIGNMENT(boid_list, percent_strength=0.01,modular_space_params=(self.max_x, self.max_y))
         self.update_rules.extend([cohere,seperate,align])
 
         #Create the swarm by appending the new boid to self.boid_list: example generate 100 boids with random positions within a certian bound
         max_x=160#       if implementing this in a graphical sense these could be the screen bounds...
         max_y=100#
-        for i in range(100):
-            rand_x=random.randint(0,max_x)#assuming min_x=0
+        for i in range(quantity):
+            rand_x = random.randint(0,max_x)#assuming min_x=0   THIS DOES NOT MATTER AS INIT KINEMATICS OVERRIDES these positions...
             rand_y = random.randint(0, max_y)#assuming min_y=0
             self.boid_list.append(Boid(rand_x,rand_y)) #NOTE! velocity inits to a random dydt dxdy each on [-1,1] but if that is too slow for a starting velocity it should be set before appending
 
@@ -82,12 +86,14 @@ class BoidSwarm():
             #update
             ref=self.boid_list[current_boid_index]
             #init to a random velocity and a random position
-            ref.dydt = random.randint(-1,1)
-            ref.dxdt = random.randint(-1,1)
-            ref.x = random.randint(self.max_x)
-            ref.y = random.randint(self.max_y)
+            #a constant to make sure starting speed is fast enough
+            s = 10
+            ref.dydt = random.randint(-s,s)
+            ref.dxdt = random.randint(-s,s)
+            ref.x = random.randint(ref.scale,self.max_x)# inits a random x between scale and max --> the minumum bound is scale because tkinter cant draw outside canvas...
+            ref.y = random.randint(ref.scale,self.max_y)
 
-    #=== (RUN) essentially advances the next time step
+    #=== essentially advances the next time step
     def update_boid_positions(self):
         '''
         :description: updates all of the velocities and positions of the boids in the boid list according to the
@@ -96,6 +102,7 @@ class BoidSwarm():
 
         #Make no mistake this one line is a massive calculation....
         velocity_updates = [rule(self.boid_list) for rule in self.update_rules]# [  {v1={x,y},v2},{etc...}  ]
+        #print(velocity_updates)
 
         for current_boid_index in range(0,len(self.boid_list)):
             #intit
@@ -107,16 +114,17 @@ class BoidSwarm():
                 velocity_y += velocity_updates[i][current_boid_index][1]
             #update
             ref=self.boid_list[current_boid_index]
-            #change position and velocity...
-            ref.dydt = velocity_x
-            ref.dxdt = velocity_y
-            ref.x = ref.x + velocity_x
-            ref.y = ref.y + velocity_y
+            #change position and velocity... (manually)
+            ref.dxdt = velocity_x if velocity_x != 0 else ref.dxdt
+            ref.dydt = velocity_y if velocity_y != 0 else ref.dydt
 
-    #=== Resolve Hyper Parameters:
-    def _resolve_hyper_parameters(self,range0,range1):
-        pass
+            #NOW update the position
+            ref._update_position(self.max_x,self.max_y)
 
+    #=== draw the boid swarm
+    def draw_swarm(self):
+        for boid in self.boid_list:
+            boid._draw(self.tkinter_canvas)
     #=== Predefined Update rules! these may be used withine the BoidSwarm ... custom rules can be added...
     @staticmethod
     def COHESION(boid_list,percent_strength=0.01,modular_space_params=False):
@@ -187,8 +195,8 @@ class BoidSwarm():
             v_update_y = 0
             for i in range(0,len(boid_list)):
                 if (current_boid_index !=i) and edge_distance(boid_list[current_boid_index],boid_list[i])<=min_distance:#ensure it is not itself and make sure it is in the min_diatance range
-                    v_update_x = v_update_x - (boid_list[current_boid_index]-boid_list[i])
-                    v_update_y = v_update_y - (boid_list[current_boid_index]-boid_list[i])
+                    v_update_x = v_update_x - (boid_list[current_boid_index].x-boid_list[i].x)
+                    v_update_y = v_update_y - (boid_list[current_boid_index].y-boid_list[i].y)
             velocity_update_list.append((v_update_x,v_update_y))
         return velocity_update_list
     @staticmethod
