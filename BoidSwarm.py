@@ -6,92 +6,34 @@
 - @University of Tulsa
 ## Description:
 - Modeling a Boids Flock (swarm) according to Separation Alignment & Cohesion and Avoidance Rules
-                see: https://www.red3d.com/cwr/boids/
-- well... not quite ... I had some ideas along the way:
-- boid weight:  most calculations for center of mass (cohesion) assume each boid weighs the same or rather that
-                each boid has the same importance... I introduce a weight factor which for a normal boid swarm
-                simulation will have no effect if all weights are the same ... just a fun parameter to make a
-                random distribution of weights and see what will happen.
+  see: https://www.red3d.com/cwr/boids/
+- The code needed a revision as it ran too slow: this is probably due the the large quantity of O(n^2) algorithms
+  this could be improved by changing the simulation ...
+- Also admittedly the code was horribly complex --> I have opted to go for basics and then after mastering that, add on
+  functionality
 '''
+
 #imports
 import random
-import time
-import arcade
-import uuid
 import math
-from Boid import Boid
+from Vector import Vector
 
 #Helps create and run a boid swarm
 class BoidSwarm():
     #=== internal setup for this class do not modify
-    def __init__(self,tkinter_canvas,max_x,max_y):
+    def __init__(self,quantity):
         '''
         :description: internal class initialization for the swarm
-        :param tkinter_canvas: is the reference to the tkinter canvas that the boids will be drawn on
-        :param max_x: the maximum world bound in the x direction... ( boid x cordinates always on [0,max_x] )
-        :param max_y: the maximum world bound in the y direction... ( boid y cordinates always on [0,max_y] )
+        :param quantity: the desired number of boids to be created...
 
         usage:
-
-        bs = BoidSwarm(160,100)
-        bs.setup()# you must override this
-        bs.init_kinematics()# you must override this
-
-        ... loop
-        bs.update_boid_positions
+        bs = BoidSwarm(quantity=100)
+        bs.update_boid_positions()
+        bs.draw(tkinter_canvas)
 
         '''
         #=== Update Rules & Boid Storage
-        self.boid_list=[]#      stores all the boid objects; relative order in this list should be preserved!
-        self.update_rules=[]#   stores every function that will be passed the boid_list ==> note should return a list of velocity update tuple pairs [(vx,vy)...]
-        #Stores the modular wrapping bounds for the spherical surface  (modular 2d space) assumes min_x,min_y = 0
-        self.max_y = max_y
-        self.max_x = max_x
-        #Stores the tkinter canvas instance
-        self.tkinter_canvas = tkinter_canvas
-        #Stores the Markov Matricies for the relationships between each Update Rule hyper-parameters between every boid (technically its not quite a markov matrix ... as sigma prob != 1 necessarily but it does capture relationship informaiton
-        #self.markov_tensor=[]# store each matrix for each function in here ... --> order corresponds to the functions prder in update_rules
-        #Stores the Partitioning scheme for each Markov Matrix (i.e  indicies a thru b  have same update rule for [(rnage1,range2...)] for rule P
-        #         [ scheme for function 0, scheme for function 1,...]  where a scheme ==> [ {[a,b] ,([r0,r1],[r2,r3],...])} , {[c,d] ,([r0,r1],[r2,r3],...])},... ]  ==> that is a scheme for 1 function
-        #         a<b<c<d ==> they are in order ... every partition must be accounted for...
-        #self.markov_partitioning_tensor=[]
-
-    #=== (OVERRIDE) setup!! or use this default this is where you build custom types of swarms...)
-    def setup(self,quantity=100):
-        '''
-        :description: Sets up the initial state of the swarm i.e how many boids configured  color ... etc... using [...] update rules and hyper parameters
-        '''
-        #Add the desired update rules (functions  accept boidlist as param ... returns velocity update ... use a lambda abstraction to bind hyper-parameters
-        cohere = lambda boid_list: BoidSwarm.COHESION(boid_list,percent_strength=0.01,modular_space_params=(self.max_x,self.max_y))
-        seperate = lambda boid_list: BoidSwarm.SEPARATION(boid_list, percent_influence_range=0.1,modular_space_params=(self.max_x, self.max_y))
-        align = lambda boid_list: BoidSwarm.ALIGNMENT(boid_list, percent_strength=0.01,modular_space_params=(self.max_x, self.max_y))
-        self.update_rules.extend([cohere,seperate,align])
-
-        #Create the swarm by appending the new boid to self.boid_list: example generate 100 boids with random positions within a certian bound
-        max_x=160#       if implementing this in a graphical sense these could be the screen bounds...
-        max_y=100#
-        for i in range(quantity):
-            rand_x = random.randint(0,max_x)#assuming min_x=0   THIS DOES NOT MATTER AS INIT KINEMATICS OVERRIDES these positions...
-            rand_y = random.randint(0, max_y)#assuming min_y=0
-            self.boid_list.append(Boid(rand_x,rand_y)) #NOTE! velocity inits to a random dydt dxdy each on [-1,1] but if that is too slow for a starting velocity it should be set before appending
-
-    #=== (OVERRIDE) inititilize the kinematics for the boid: starting position and starting velocity
-    def init_kinematics(self):
-        '''
-        :description: this function should iterate over every boid in the self.boid list and set an initial position and
-                      velocity
-        '''
-        #Random strategy:
-        for current_boid_index in range(0,len(self.boid_list)):
-            #update
-            ref=self.boid_list[current_boid_index]
-            #init to a random velocity and a random position
-            #a constant to make sure starting speed is fast enough
-            s = 10
-            ref.dydt = random.randint(-s,s)
-            ref.dxdt = random.randint(-s,s)
-            ref.x = random.randint(ref.scale,self.max_x)# inits a random x between scale and max --> the minumum bound is scale because tkinter cant draw outside canvas...
-            ref.y = random.randint(ref.scale,self.max_y)
+        self.boid_list = []
 
     #=== essentially advances the next time step
     def update_boid_positions(self):
@@ -226,25 +168,61 @@ class BoidSwarm():
 
     #=== Useful methods
     @staticmethod
-    def euclidian_distance(boid0,boid1,modular_space=False):
+    def euclidian_distance(pos_0,pos_1,modular_space=False,squared=False):
         '''
 
-        :param boid0: a boid with an x and a y cordinate   ==> boid.x boid.y
-        :param boid1: a boid with an x and a y cordinate
+        :param pos_0: a position of type Vector
+        :param pos_1: a positionof type Vector
         :param modular_space:  defaults to false ==> computes euclidian distance assuming the topography 'wraps' ...
-                               pass (x_max,y_max) where it is assumed the world is bounded by min_x=0,min_y=0 and where
-                               y_max and x_max are the maximum allowed x and y_positions within the world
+                               pass a Vector containing the maximmum allowed values
+                               where it is assumed the world is bounded by min_x=0,min_y=0 ...etc... and where
+                               y_max and x_max are the maximum allowed x and y_positions within the world etc....
+        :param squared: defaults to false ==> as sqrt is a expensive operation when computing length ... you can
+                        just get the distance squared easily and do a multiplication of the distance you want to compare
+                        to and that is more efficient...
         :return: distance as float
         '''
         if not modular_space:
             #Normal implemetation of euclidian distance
-            return math.sqrt(math.pow(boid0.x-boid1.x,2)+math.pow(boid0.y-boid1.y,2))
+            return len(pos_0-pos_1) if not squared else sum((pos_0-pos_1).apply(lambda x: x*x).components)
         else:
             #use the equation i derived for modular space euclidian distance   min(|x1-x2|,max_x - |x1-x2|)   same applies to y (note the order is not specific for x2-x1 or x1-x2 but it must be consistant
-            #X
-            delta_x = abs(boid0.x-boid1.x)
-            x_comp = min(delta_x,modular_space[0]-delta_x)#x component
-            #Y
-            delta_y = abs(boid0.y - boid1.y)
-            y_comp = min(delta_y, modular_space[1] - delta_y)#y component
-            return math.sqrt(math.pow(x_comp,2)+math.pow(y_comp,2))
+
+            #Compte the seperation of the components
+            delta = (pos_0-pos_1).apply(abs)
+            #compute distance from boundry
+            mod_dist  = modular_space - delta
+            #compute the minumum distance for each... ==> distance components
+            dist_vect = Vector([min(delta[i],mod_dist[i]) for i in range(0,len(delta.components))])
+            #returns the distance between the two n dimensional points in modular space
+            return len(dist_vect) if not squared else sum(dist_vect.apply(lambda x:x*x).components)
+    @staticmethod
+    def calc_distance_map(list_of_positions, modular_space=False,squared=False):
+        '''
+        :description: uses a caching based approach to calculate a dictionaries of dictionaries containing the position distances:
+                          A   to    B         dist
+                      {index:{ otherindex: distance,....},....}
+        :param list_of_positions: a list of position Vectors [Vector,Vector,...,Vector]
+        :modular_space: see euclidian_distance docstring
+        squared: see euclidian_distance docstring
+        :return: (see description)
+        '''
+        cache={}
+        list_of_dist_dicts=[{} for i in range(0,len(list_of_positions))]
+        for i in range(0,len(list_of_positions)):
+            cache[i] = {}#put a dictionary in each
+            for j in range(0,len(list_of_positions)):
+                #if neither key type is in the cache... then we need to calculate the value
+                if str(j) not in cache[i]:
+                    #Run the 'intensive' calculation
+                    dist = BoidSwarm.euclidian_distance(list_of_positions[i],list_of_positions[j],modular_space=modular_space,squared=squared)
+                    #ADD to both dictionaries
+                    if cache[i]==None:
+                        cache[i]={}
+                    if cache[j]==None:
+                        cache[j]={}
+                    cache[j][i] = dist
+                    cache[i][j] = dist
+                else:
+                    pass # it was added to both dictionaries above...
+        return cache

@@ -11,54 +11,74 @@
 #imports
 import uuid
 import math
+from Vector import Vector
 
 #Stores all the associated information with a boid
 class Boid():
-    def __init__(self,x_0,y_0,color='black'):
+    def __init__(self,pos,vel,accel,color='black'):
         '''
         :description: Creates a Boid (https://www.red3d.com/cwr/boids/)                     (side note! i just figured out pycharm can add in docstrings! first time using these... fairly useful!)
-        :param x_0: is the initial x coordinate of the boid
-        :param y_0: is the initial y coordinate of the boid
+        :param pos: is the initial position of the boid
+        :param vel: is the initial velocity of the boid
+        :param accel: is the initial acceleration of the boid (reset after every timestep)
         :param color: defaults to black is a tuple of three integers specifying an rgb color of the boid's drawing example (255,255,255)
         '''
         #======= BASIC BOID SIMULATION INFO
-        #Position Information:
-        self.x=x_0#                     is the initial x coordinate of the boid
-        self.y=y_0#                     is the initial y coordinate of the boid
-        #Velocity Information:
-        self.dxdt=0#                    the velocity of the boid in the x direction
-        self.dydt=0#                    the velocity of the boid in the y direction
+        #Position, Velocity, & Acceleration Information:
+        self.pos = pos
+        self.vel = vel
+        self.accel = accel
+        self.max_vel = 9.8696#          sets the maximum velocity achievable... arbritrarily set to ~pi^2  here for example
+        self.max_accel= 2.718#          sets the maximum acceleration...   arbritrarily set to ~e  here for example
         #Influence Range:
-        self.influence_radius=20#        the boid considers other boids within this distance from itself... (influence type depends on boid type)
-        #Asthetics (what the Boid looks like)
-        #self.trail_color='grey'# specifies the color of the boids path trail (light grey by default)
-        #self.trail_visible=False#       states whether the trail is shown
-        #self.trail_life=3000#           number of milliseconds before a stroke of the trail fades
-        self.color=color#               the color of the boid see __init__ parameter color descriptio
-        self.scale=1#            increases the size of the drawing of the boid's circle
+        self.rule_ranges=[]#             holds the distance for each rule...
+        self.rule_weights=[]#            holds the 'weight' for each corresponding rule
+
+        #Display Settings
+        self.color=color#               the color of the boid see __init__ parameter color description
+        self.scale=1#                   the scale to draw the boid! note this influences the screen bounds as it cant be drawn offscreen...
         #========= ADVANCED (expiramental) BOID INFO
         #Descriptive information
         self.id= uuid.uuid4()#          a unique id for the boid
         self.name=None#                 an optional name for the boid
         self.type=None#                 specifies a type of boid (i.e there may be different interacting swarms)
-        #Extra Information:
-        self.weight=1#                  an idea i had --> some boids have more importance when calculating cohesion for center of mass see document description comment (1=identity and no effect if all are 1)
-        #(planned) Statistical Information: idea=keep track of # of close calls with predators ... use genetic algorithm for update rule params
-    def _draw(self,tkinter_canvas):
+        self.mass=1
+
+    def draw(self,tkinter_canvas):
+        '''
+        :description: takes a tkinter canvas and draws a representation of the boid to the canvas
+        :param tkinter_canvas: a tkinter canvas object
+        '''
+        #Tkinter Dimensions Max Vector
+        t_dim = Vector([int(tkinter_canvas.cget('width')),int(tkinter_canvas.cget('height'))])
+        scale_vect=  Vector([self.scale,self.scale])
         #center the boid  WARNING! ==> Update position should be bounded ==> self.x-scale this bounds it by x,y =0 & x,y=max
-        x0 = max(0,(self.x - self.scale))
-        y0 = max(0,(self.y - self.scale))
-        x1 = min(int(tkinter_canvas.cget('width')),(self.x + self.scale))
-        y1 = min(int(tkinter_canvas.cget('height')),(self.y + self.scale))
-        tkinter_canvas.create_oval((x0,y0,x1,y1),fill=self.color)
-    def _update_position(self,canvas_width,canvas_height):
+        pos_0 = Vector.comp(max,Vector([0,0]),self.pos - scale_vect)#bottom left corner
+        pos_f = Vector.comp(min,t_dim,self.pos + scale_vect)#top right corners
+        #draw the boid ... note using syntatic sugar for position update
+        tkinter_canvas.create_oval((pos_0.x,pos_0.y,pos_f.x,pos_f.y),fill=self.color)
+
+    def update_position(self,max_dim_vect):
         '''
         :description:  uses the velocity and the modular space constraints (screen height and width) to compute the next
                        position of the boid; NOTE! Velocity should manually be updated FIRST!
+        :param max_dim_vect: is a Vector specyfing the maximum value for x and y cordinates
         '''
+
+        # F=MA ==> A = F/M  ==> Force F applied to Mass M induce Acceleration A
+
+        #Determine the forces of all the other boids acting upon
+        # accel |--> newaccel = min( (sigma all forces)/m ,  max accel )
+        # vel   |--> newvel = min(vel + accel, max vel)
+        # pos   |--> newpos = (pos + vel) mod (canvas bounds)
+
         self.x = (self.dxdt +self.x) % canvas_width
         self.y = (self.dydt + self.y) % canvas_height
     def __str__(self):
+        '''
+        :description: returns a string representation of the boid
+        :return: str rep of boid
+        '''
         xstr = (str(self.x)+"     ")[0:5]#truncates with 5 spaces if smaller
         ystr = (str(self.y) + "     ")[0:5]  # truncates with 5 spaces if smaller
         dydt = (str(self.dydt) + "     ")[0:5]
