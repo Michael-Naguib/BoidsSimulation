@@ -12,6 +12,7 @@
 import uuid
 import math
 from Vector import Vector
+from BoidUtils import BoidUtils
 
 #Stores all the associated information with a boid
 class Boid():
@@ -24,15 +25,19 @@ class Boid():
         :param color: defaults to black is a tuple of three integers specifying an rgb color of the boid's drawing example (255,255,255)
         '''
         #======= BASIC BOID SIMULATION INFO
-        #Position, Velocity, & Acceleration Information:
+        #Position, Velocity, Acceleration, & mass Information:
         self.pos = pos
         self.vel = vel
         self.accel = accel
         self.max_vel = 9.8696#          sets the maximum velocity achievable... arbritrarily set to ~pi^2  here for example
         self.max_accel= 2.718#          sets the maximum acceleration...   arbritrarily set to ~e  here for example
+        self.max_force = 9#          sets the maximum force that can be applied PER EACH RULE!
+        self.mass = 1#                  sets the mass of the boid ... heavier boids require more force to move.... 1=no effect
+
         #Influence Range:
-        self.rule_ranges=[]#             holds the distance for each rule...
-        self.rule_weights=[]#            holds the 'weight' for each corresponding rule
+        self.rules=[BoidUtils.Align,BoidUtils.Cohere,BoidUtils.Separate]# Holds the references to the functions
+        self.rule_ranges=[10,40,5]#            holds the distance for each rule...
+        self.rule_weights=[0.02,0.02,1]#            holds the 'weight' for each corresponding rule
 
         #Display Settings
         self.color=color#               the color of the boid see __init__ parameter color description
@@ -42,8 +47,6 @@ class Boid():
         self.id= uuid.uuid4()#          a unique id for the boid
         self.name=None#                 an optional name for the boid
         self.type=None#                 specifies a type of boid (i.e there may be different interacting swarms)
-        self.mass=1
-
     def draw(self,tkinter_canvas):
         '''
         :description: takes a tkinter canvas and draws a representation of the boid to the canvas
@@ -57,30 +60,46 @@ class Boid():
         pos_f = Vector.comp(min,t_dim,self.pos + scale_vect)#top right corners
         #draw the boid ... note using syntatic sugar for position update
         tkinter_canvas.create_oval((pos_0.x,pos_0.y,pos_f.x,pos_f.y),fill=self.color)
-
-    def update_position(self,max_dim_vect):
+    def update_position(self,boids_list,distance_map,canvas_bounds):
         '''
         :description:  uses the velocity and the modular space constraints (screen height and width) to compute the next
                        position of the boid; NOTE! Velocity should manually be updated FIRST!
-        :param max_dim_vect: is a Vector specyfing the maximum value for x and y cordinates
+        :param distance_map: a dictionary containing the distances between this boid and all other boids
+                             key: index value: distance
+        :param canvas_bounds: is a Vector specifying the maximum value for x and y coordinates ex Vector([1920,1080])
         '''
 
+        #Calculate the weight updates according to the boid rules...
+
         # F=MA ==> A = F/M  ==> Force F applied to Mass M induce Acceleration A
-
         #Determine the forces of all the other boids acting upon
-        # accel |--> newaccel = min( (sigma all forces)/m ,  max accel )
-        # vel   |--> newvel = min(vel + accel, max vel)
-        # pos   |--> newpos = (pos + vel) mod (canvas bounds)
+        # fc = (sigma all forces)/m
+        # accel |--> newaccel = fc.norm()*max_accel if abs(fc)>max accel for either component else fc
+        # vel   |--> newvel = (vel+accel).norm()*max_vel if abs(vel+accel)>max_vel else  vel+accel
+        # pos   |--> newpos = (pos + vel) mod (canvas bounds)      make sure to convert to ints ... for game grid
+        # accel |--> 0
 
-        self.x = (self.dxdt +self.x) % canvas_width
-        self.y = (self.dydt + self.y) % canvas_height
+        #The Sum of the Forces from the Rules
+        force_sum = Vector([0,0])
+        for i in range(0,len(self.rules)):
+            force_sum = force_sum + self.rules[i](self,boids_list,distance_map,self.rule_weights[i],self.rule_ranges[i])
+        force_sum = force_sum*(1/self.mass)#factor in the mass of the boid...
+        #Update the Acceleration according to the force and limit: (if either component is over)
+        self.accel = force_sum.limit(self.max_accel)
+        #Update the Velocity and Limit
+        vel_update = self.vel+self.accel
+        self.vel = vel_update.limit(self.max_vel)
+        #Update the position and wrap the bounds...   add the current position and velocity then convert to int then mod canvas bounds
+        self.pos = ((self.pos+self.vel).apply(int)) % canvas_bounds
+        #finally reset the acceleration
+        self.accel=Vector([0,0])
+
     def __str__(self):
         '''
         :description: returns a string representation of the boid
         :return: str rep of boid
         '''
-        xstr = (str(self.x)+"     ")[0:5]#truncates with 5 spaces if smaller
-        ystr = (str(self.y) + "     ")[0:5]  # truncates with 5 spaces if smaller
-        dydt = (str(self.dydt) + "     ")[0:5]
-        dxdt = (str(self.dxdt) + "     ")[0:5]
-        return "X:{0} Y:{1} dydt:{2} dxdt:{3} id:{4}".format(xstr,ystr,dydt,dxdt,str(self.id))
+        pos = (str(self.pos) + "            ")[0:13]# limits to 13 characters...
+        vel = (str(self.vel)+ "            ")[0:13]
+        accel_mag = (str(self.accel.mag())+ "            ")[0:13]
+        return "Pos:{0} , Vel:{1} , Accel Mag:{2}, ID:{4}".format(pos,vel,accel_mag,str(self.id))
