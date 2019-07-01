@@ -11,7 +11,7 @@
 import math
 import copy
 import random
-
+import numpy as np
 #Settings
 random.seed(a=31415)
 
@@ -22,6 +22,7 @@ class Vector():#TODO: refine implementation so not so many new vectors are const
         :param components_list: a list containing the componenets of the vector ex. for x=2 y=4 ==> pass [2,4] .. works with n components
         '''
         self.components = components_list
+
     def __add__(self, other):
         '''
         :description: adds a vector to either a scalar or another vector
@@ -202,7 +203,7 @@ class Vector():#TODO: refine implementation so not so many new vectors are const
         components = [func(self.components[i]) for i in range(0,len(self.components))]
         return Vector(components)
     @staticmethod
-    def rand(max_range=1,dim=2):
+    def rand(max_range=1,dim=3):
         '''
         :description: creates a vector with random components (within a 0-maxrange) and for dim number of components
         :param max_range: the maximum value a component can be
@@ -225,6 +226,13 @@ class Vector():#TODO: refine implementation so not so many new vectors are const
         :return: the y component
         '''
         return self.components[1]
+    @property
+    def z(self):
+        '''
+        :description: a little bit of syntatic sugar for accessing variables
+        :return: the y component
+        '''
+        return self.components[2]
     @staticmethod
     def comp(func,vect_0,vect_1):
         '''

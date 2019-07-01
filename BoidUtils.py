@@ -10,8 +10,8 @@
 
 #imports
 from Vector import Vector
-
-
+from timeit import timeit
+import multiprocessing as mp
 class BoidUtils:
     def __init__(self):
         pass
@@ -28,7 +28,7 @@ class BoidUtils:
         :return: the force vector...
         '''
         # store
-        pos_sum = Vector([0,0])
+        pos_sum = Vector([0,0,0])
         count = 0
 
         #iterate over the distances in the map...
@@ -62,7 +62,7 @@ class BoidUtils:
         :return: the force vector...
         '''
         # store
-        pos_sum = Vector([0,0])
+        pos_sum = Vector([0,0,0])
         count = 0
 
         #iterate over the distances in the map...
@@ -83,7 +83,7 @@ class BoidUtils:
             steer = (pos_sum.to_len(boid.max_vel)-boid.vel).limit(boid.max_force)# Steering
             return steer*weight
         else:
-            return Vector([0,0])
+            return Vector([0,0,0])
     @staticmethod
     def  Align(boid,boid_list,distance_map,weight,range):
         '''
@@ -96,7 +96,7 @@ class BoidUtils:
         :return: the force vector...
         '''
         # store
-        vel_sum = Vector([0,0])
+        vel_sum = Vector([0,0,0])
         count = 0
 
         #iterate over the distances in the map...
@@ -117,7 +117,7 @@ class BoidUtils:
             steer = (vel_sum.to_len(boid.max_vel)+boid.vel).limit(boid.max_force)# Steering
             return steer*weight
         else:
-            return Vector([0,0])
+            return Vector([0,0,0])
     #=== Useful methods
     @staticmethod
     def euclidian_distance(pos_0,pos_1,modular_space=False,squared=False):
@@ -148,8 +148,8 @@ class BoidUtils:
             dist_vect = Vector.comp(min,delta,mod_dist)
             #returns the distance between the two n dimensional points in modular space
             return dist_vect.mag() if not squared else sum(dist_vect.apply(lambda x:x*x).components)
-    @staticmethod
-    def calc_distance_map(list_of_positions, modular_space=False,squared=False):
+    @staticmethod#@timeit
+    def calc_distance_map(list_of_positions, modular_space=False,squared=False):#Using timeit on this determined that this was the slowest part of thecode ...
         '''
         :description: uses a caching based approach to calculate a dictionaries of dictionaries containing the position distances:
                           A   to    B         dist
@@ -179,4 +179,6 @@ class BoidUtils:
                     cache[j][i] = dist
                 else:
                     pass # it was added to both dictionaries above...
+        #(str(c)+" " + str(len(list_of_positions)*len(list_of_positions)))
         return cache
+

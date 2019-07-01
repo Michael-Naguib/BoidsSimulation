@@ -13,7 +13,6 @@ import uuid
 import math
 from Vector import Vector
 from BoidUtils import BoidUtils
-
 #Stores all the associated information with a boid
 class Boid():
     def __init__(self,pos,vel,accel,color='black'):
@@ -30,14 +29,14 @@ class Boid():
         self.vel = vel
         self.accel = accel
         self.max_vel = 9.8696#          sets the maximum velocity achievable... arbritrarily set to ~pi^2  here for example
-        self.max_accel= 2.718#          sets the maximum acceleration...   arbritrarily set to ~e  here for example
-        self.max_force = 9#          sets the maximum force that can be applied PER EACH RULE!
-        self.mass = 1#                  sets the mass of the boid ... heavier boids require more force to move.... 1=no effect
+        self.max_accel= 2.718*2#          sets the maximum acceleration...   arbritrarily set to ~e  here for example
+        self.max_force = 0.05#          sets the maximum force that can be applied PER EACH RULE!
+        self.mass = 0.02#                  sets the mass of the boid ... heavier boids require more force to move.... 1=no effect
 
         #Influence Range:
         self.rules=[BoidUtils.Align,BoidUtils.Cohere,BoidUtils.Separate]# Holds the references to the functions
-        self.rule_ranges=[10,40,5]#            holds the distance for each rule...
-        self.rule_weights=[0.02,0.02,1]#            holds the 'weight' for each corresponding rule
+        self.rule_ranges=[60,80,20]#            holds the distance for each rule...
+        self.rule_weights=[9/18,1/18,7/18]#            holds the 'weight' for each corresponding rule
 
         #Display Settings
         self.color=color#               the color of the boid see __init__ parameter color description
@@ -53,13 +52,14 @@ class Boid():
         :param tkinter_canvas: a tkinter canvas object
         '''
         #Tkinter Dimensions Max Vector
-        t_dim = Vector([int(tkinter_canvas.cget('width')),int(tkinter_canvas.cget('height'))])
-        scale_vect=  Vector([self.scale,self.scale])
+        t_dim = Vector([int(tkinter_canvas.cget('width')),int(tkinter_canvas.cget('height')),tkinter_canvas._my_z_hack])
+        scale_vect=  Vector([self.scale,self.scale,self.scale])
         #center the boid  WARNING! ==> Update position should be bounded ==> self.x-scale this bounds it by x,y =0 & x,y=max
-        pos_0 = Vector.comp(max,Vector([0,0]),self.pos - scale_vect)#bottom left corner
+        pos_0 = Vector.comp(max,Vector([0,0,0]),self.pos - scale_vect)#bottom left corner
         pos_f = Vector.comp(min,t_dim,self.pos + scale_vect)#top right corners
         #draw the boid ... note using syntatic sugar for position update
         tkinter_canvas.create_oval((pos_0.x,pos_0.y,pos_f.x,pos_f.y),fill=self.color)
+
     def update_position(self,boids_list,distance_map,canvas_bounds):
         '''
         :description:  uses the velocity and the modular space constraints (screen height and width) to compute the next
@@ -80,7 +80,7 @@ class Boid():
         # accel |--> 0
 
         #The Sum of the Forces from the Rules
-        force_sum = Vector([0,0])
+        force_sum = Vector([0,0,0])
         for i in range(0,len(self.rules)):
             force_sum = force_sum + self.rules[i](self,boids_list,distance_map,self.rule_weights[i],self.rule_ranges[i])
         force_sum = force_sum*(1/self.mass)#factor in the mass of the boid...

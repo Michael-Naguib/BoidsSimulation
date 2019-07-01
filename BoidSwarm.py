@@ -17,7 +17,6 @@
 from Vector import Vector
 from BoidUtils import BoidUtils
 from Boid import Boid
-import multiprocessing as mp
 
 #Helps create and run a boid swarm
 
@@ -37,7 +36,7 @@ class BoidSwarm():
         '''
         #=== Update Rules & Boid Storage
         rv = Vector.rand# random vector generator... has config settings see Vector class
-        d = min(canvas_bounds.x,canvas_bounds.y)# make sure the random ness is contained in the space...
+        d = min(canvas_bounds.x,canvas_bounds.y,canvas_bounds.z)# make sure the random ness is contained in the space...
         #here wer are init a random posittion,velocity,acceleration
         self.boid_list = [Boid(rv(max_range=d),rv(max_range=32),rv(max_range=3)) for i in range(quantity)]
         self.canvas_bounds = canvas_bounds

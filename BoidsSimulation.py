@@ -14,12 +14,14 @@ from tkinter import *
 from BoidSwarm import BoidSwarm
 import time
 from Vector import Vector
+
 #main program
 if __name__ == "__main__":
     #=== Settings
-    HEIGHT = 300
+    HEIGHT = 450
     WIDTH = round(HEIGHT * 1.6180339) # preserve a nice aspect ratio by using phi= THE GOLDEN RATIO (one of my favorite numbers)
-    QUANTITY=50
+    DEPTH = HEIGHT
+    QUANTITY=100
 
     #=== Setup the Graphics
     root = Tk()
@@ -27,14 +29,15 @@ if __name__ == "__main__":
     root.geometry('%dx%d+%d+%d' % (WIDTH, HEIGHT, (root.winfo_screenwidth() - WIDTH) / 2, (root.winfo_screenheight() - HEIGHT) / 2))
     root.bind_all('<Escape>', lambda event: event.widget.quit())
     graph = Canvas(root, width=WIDTH, height=HEIGHT, background='white')
+    graph._my_z_hack = DEPTH#VERY HACKY... no advise...
     graph.pack()
 
     #=== Setup the swarm
-    mySwarm = BoidSwarm(QUANTITY,Vector([WIDTH,HEIGHT]))
+    mySwarm = BoidSwarm(QUANTITY,Vector([WIDTH,HEIGHT,DEPTH]))
 
     #=== Enter the main loop
     while True:
         graph.delete(ALL)#clear the screen
-        mySwarm.update_boid_positions()#runs the main calculation for the boid positions
+        mySwarm.update_boid_positions()  # runs the main calculation for the boid positions
         mySwarm.draw_swarm(graph)#is using the reference to the graph it was passed durring init
         graph.update()#update the screen
