@@ -51,14 +51,13 @@ class Boid():
         :description: takes a tkinter canvas and draws a representation of the boid to the canvas
         :param tkinter_canvas: a tkinter canvas object
         '''
-        #Tkinter Dimensions Max Vector
-        t_dim = Vector([int(tkinter_canvas.cget('width')),int(tkinter_canvas.cget('height')),tkinter_canvas._my_z_hack])
-        scale_vect=  Vector([self.scale,self.scale,self.scale])
-        #center the boid  WARNING! ==> Update position should be bounded ==> self.x-scale this bounds it by x,y =0 & x,y=max
-        pos_0 = Vector.comp(max,Vector([0,0,0]),self.pos - scale_vect)#bottom left corner
-        pos_f = Vector.comp(min,t_dim,self.pos + scale_vect)#top right corners
+        #draw a circle whose center is at the current position of the boid and with a radius of the scale factor..
+        bound_lower_left = self.pos + self.scale
+        bound_upper_right = self.pos - self.scale
+        d2Cord = (bound_lower_left.x,bound_lower_left.y,bound_upper_right.x,bound_upper_right.y)
+
         #draw the boid ... note using syntatic sugar for position update
-        tkinter_canvas.create_oval((pos_0.x,pos_0.y,pos_f.x,pos_f.y),fill=self.color)
+        tkinter_canvas.create_oval(d2Cord,fill=self.color)
 
     def update_position(self,boids_list,distance_map,canvas_bounds):
         '''
