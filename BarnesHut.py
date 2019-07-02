@@ -148,9 +148,10 @@ class BarnesHut():
         #else we never returned false so true!
         return True
 
-
-# Use for Binary, Trinry, Quad, ... Oct trees
 class Ntree():
+    '''
+    Use for Binary, Trinry, Quad, ... Oct trees
+    '''
     def __init__(self,n,value=None):
         #using a linked structure... stored in a list
         self.children = [None for i in range(0,n)]
@@ -169,7 +170,8 @@ class Ntree():
         return self.value
 
 if __name__ == "__main__":
-    #print(BarnesHut.sub_divide_box_nd([[0,6],[10,18]]))# Test: correct output [[[5.0, 5.0], [15.0, 9.0]], [[5.0, 5.0], [6, 9.0]], [[0, 5.0], [15.0, 9.0]], [[0, 5.0], [6, 9.0]]]
+    #print(BarnesHut.sub_divide_box_nd([[0,6],[10,18]]))
+    #Correct Output: [[[5.0, 5.0], [15.0, 9.0]], [[5.0, 5.0], [6, 9.0]], [[0, 5.0], [15.0, 9.0]], [[0, 5.0], [6, 9.0]]]
     pass
 
 

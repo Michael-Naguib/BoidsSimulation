@@ -22,7 +22,6 @@ from Boid import Boid
 
 class BoidSwarm():
     #========= SETUP
-    #=== internal setup for this class do not modify
     def __init__(self,quantity,canvas_bounds):
         '''
         :description: internal class initialization for the swarm
@@ -31,23 +30,26 @@ class BoidSwarm():
 
         usage:
         bs = BoidSwarm(quantity=100,canvas_bounds=Vector([1920,1080]))#width x height
-        bs.update_boid_positions()
-        bs.draw_swarm(tkinter_canvas)
+        bs.setup()# a custom function that specifies the types of boids created... based on self.initial_quantity
+        LOOP
+            bs.update_boid_positions()
+            bs.draw_swarm(tkinter_canvas)
 
         '''
+        self.canvas_bounds = canvas_bounds
+        self.initial_quantity=quantity#DOES NOT UPDATE when new boids are added or deleted
+        #Run the Boids setup...
+    def setup(self):
         #=== Update Rules & Boid Storage
         rv = Vector.rand# random vector generator... has config settings see Vector class
-        d = min(canvas_bounds.x,canvas_bounds.y,canvas_bounds.z)# make sure the random ness is contained in the space...
+        d = min(self.canvas_bounds.x,self.canvas_bounds.y,self.canvas_bounds.z)# make sure the random ness is contained in the space...
         #here wer are init a random posittion,velocity,acceleration
-        self.boid_list = [Boid(rv(max_range=d),rv(max_range=32),rv(max_range=3)) for i in range(quantity)]
-        self.canvas_bounds = canvas_bounds
-        #Multiprocessing Speedup settings
+        self.boid_list = [Boid(rv(max_range=d),rv(max_range=32),rv(max_range=3)) for i in range(self.initial_quantity)]
     #========= RUN
-    #=== essentially advances the next time step
     def update_boid_positions(self):
         '''
         :description: updates all of the Accelerations, Velocities and Positions of the boids in the boid list according to the
-                      list of present update rules and settings configured in each boid
+                      list of present update rules and settings configured in each boid (essentially advances the next time step)
         '''
         #calculate: The distance information  not using squared optimization because you would have to take the sqrt later on
         #           which defeats the purpose ... easier to do it here
@@ -57,12 +59,15 @@ class BoidSwarm():
         #For each boid have it update its position using its distance map as well as a ref to the boid list and canvas bounds
         for i in range(0,len(self.boid_list)):
             self.boid_list[i].update_position(self.boid_list,distance_maps[i],self.canvas_bounds)
-    #=== draw the boid swarm
     def draw_swarm(self,tkinter_canvas):
+        '''
+        :description: draws the boid swarm to the canvas by calling the draw method for each boid (passing the canvas)
+        :param tkinter_canvas:
+        :return:
+        '''
         for boid in self.boid_list:
             boid.draw(tkinter_canvas)
     #========= Utility Methods
-    #=== get a string representation of a part of the swarm
     def __str__(self,quant=1):
         '''
         :description: print a limited quantity of the boids ... always takes from the front of the list
@@ -72,7 +77,6 @@ class BoidSwarm():
         out=""
         for i in range(0,min(quant,len(self.boid_list))):
             out = out+ str(self.boid_list[i]) + "\n"
-    #=== adds a boid at the given Vector
     def add_boid_at_pos(self,pos_vector):
         '''
         :description: adds a boid at the specified position set with a random velocity and acceleration
@@ -80,10 +84,9 @@ class BoidSwarm():
         '''
         rv = Vector.rand  # random vector generator... has config settings see Vector class
         self.boid_list.add(Boid(pos_vector,rv(max_range=32),rv(max_range=3)))
-    #=== deletes a boid: by id,index,random (may pass one kew word arg at a time)
     def delete_boid(self,id=False,index=False,random=False):
         '''
-        :description: deletes a boid based on the supplied criteria
+        :description: deletes a boid based on the supplied criteria by id,index,random (may pass one kew word arg at a time)
         :param id:   coresponding to the UUID property of each boid O(n) worst case
         :param index: the location of the boid in the boid list  O(n) worst case
         :param random: if set to True will delete a random boid O(n) worst case

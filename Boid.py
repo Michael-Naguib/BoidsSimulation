@@ -58,7 +58,6 @@ class Boid():
 
         #draw the boid ... note using syntatic sugar for position update
         tkinter_canvas.create_oval(d2Cord,fill=self.color)
-
     def update_position(self,boids_list,distance_map,canvas_bounds):
         '''
         :description:  uses the velocity and the modular space constraints (screen height and width) to compute the next
@@ -92,7 +91,6 @@ class Boid():
         self.pos = ((self.pos+self.vel).apply(int)) % canvas_bounds
         #finally reset the acceleration
         self.accel=Vector([0,0])
-
     def __str__(self):
         '''
         :description: returns a string representation of the boid
