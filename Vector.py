@@ -11,7 +11,7 @@
 import math
 import copy
 import random
-import numpy as np
+#import numpy as np
 #Settings
 random.seed(a=31415)
 
@@ -22,7 +22,6 @@ class Vector():#TODO: refine implementation so not so many new vectors are const
         :param components_list: a list containing the componenets of the vector ex. for x=2 y=4 ==> pass [2,4] .. works with n components
         '''
         self.components = components_list
-
     def __add__(self, other):
         '''
         :description: adds a vector to either a scalar or another vector
@@ -202,6 +201,12 @@ class Vector():#TODO: refine implementation so not so many new vectors are const
         '''
         components = [func(self.components[i]) for i in range(0,len(self.components))]
         return Vector(components)
+    def shape(self):
+        '''
+        :description: the shape of the vector ==> also refered to as the dimension ex (x,y)=> 2d (x,y,z)==>3d ...
+        :return: shape as integer... x=1 xy=2 xyz=3 .... etc...
+        '''
+        return len(self.components)
     @staticmethod
     def rand(max_range=1,dim=3):
         '''
@@ -212,6 +217,9 @@ class Vector():#TODO: refine implementation so not so many new vectors are const
         '''
         components = [max_range*random.random() for i in range(0,dim)]
         return Vector(components)
+    @staticmethod
+    def zeros(dim=3):
+        return Vector([0 for i in range(dim)])
     @property
     def x(self):
         '''

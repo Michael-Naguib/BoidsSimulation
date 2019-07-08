@@ -48,7 +48,7 @@ class Boid():
         self.type=None#                 specifies a type of boid (i.e there may be different interacting swarms)
     def draw(self,tkinter_canvas):
         '''
-        :description: takes a tkinter canvas and draws a representation of the boid to the canvas
+        :description: takes a tkinter canvas and draws a representation of the boid to the canvas (only does 2d...)
         :param tkinter_canvas: a tkinter canvas object
         '''
         #draw a circle whose center is at the current position of the boid and with a radius of the scale factor..
@@ -76,9 +76,8 @@ class Boid():
         # vel   |--> newvel = (vel+accel).norm()*max_vel if abs(vel+accel)>max_vel else  vel+accel
         # pos   |--> newpos = (pos + vel) mod (canvas bounds)      make sure to convert to ints ... for game grid
         # accel |--> 0
-
         #The Sum of the Forces from the Rules
-        force_sum = Vector([0,0,0])
+        force_sum = Vector.zeros(dim=self.pos.shape())
         for i in range(0,len(self.rules)):
             force_sum = force_sum + self.rules[i](self,boids_list,distance_map,self.rule_weights[i],self.rule_ranges[i])
         force_sum = force_sum*(1/self.mass)#factor in the mass of the boid...
@@ -90,7 +89,7 @@ class Boid():
         #Update the position and wrap the bounds...   add the current position and velocity then convert to int then mod canvas bounds
         self.pos = ((self.pos+self.vel).apply(int)) % canvas_bounds
         #finally reset the acceleration
-        self.accel=Vector([0,0])
+        self.accel=Vector.zeros(dim=canvas_bounds.shape())
     def __str__(self):
         '''
         :description: returns a string representation of the boid

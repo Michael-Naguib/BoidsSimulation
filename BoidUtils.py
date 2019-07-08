@@ -12,12 +12,13 @@
 from Vector import Vector
 from timeit import timeit
 import multiprocessing as mp
+#from deprecated import deprecated
 class BoidUtils:
     def __init__(self):
         pass
     #=== Predefined Update rules! these may be used withine the BoidSwarm ... custom rules can be added...
     @staticmethod
-    def Cohere(boid,boid_list,distance_map,weight,range):
+    def Cohere(boid,boid_list,distance_map,weight,ranger,max_neighbor=10):
         '''
         :description: calculates the weighted coherernce force for a given boid based upon the boid list and distance map etc...
         :param boid: the current boid for which the calculation is being done....
@@ -28,7 +29,7 @@ class BoidUtils:
         :return: the force vector...
         '''
         # store
-        pos_sum = Vector([0,0,0])
+        pos_sum = Vector.zeros(dim=boid.pos.shape())
         count = 0
 
         #iterate over the distances in the map...
@@ -38,9 +39,11 @@ class BoidUtils:
             # to iterate over known partitions for which it does not interact....
             edge_dist = distance_map[key]
             # compare the edge distance to influence radius of the current boid
-            if 0<edge_dist and edge_dist <= range:#  if the edge dist = 0 ==> it is itself so exclude....
+            if 0<edge_dist and edge_dist <= ranger:#  if the edge dist = 0 ==> it is itself so exclude....
                 count += 1
                 pos_sum = pos_sum + boid_list[key].pos#sum the positions
+            if  bool(max_neighbor) and count >=max_neighbor:
+                break
 
         #Determine the steering:
         if count >0:
@@ -51,7 +54,7 @@ class BoidUtils:
         else:
             return pos_sum# will be Vector([0,0])
     @staticmethod
-    def Separate(boid,boid_list,distance_map,weight,range):
+    def Separate(boid,boid_list,distance_map,weight,ranger,max_neighbor=10):
         '''
         :description: calculates the weighted separation force for a given boid based upon the boid list and distance map etc...
         :param boid: the current boid for which the calculation is being done....
@@ -62,7 +65,7 @@ class BoidUtils:
         :return: the force vector...
         '''
         # store
-        pos_sum = Vector([0,0,0])
+        pos_sum = Vector.zeros(dim=boid.pos.shape())
         count = 0
 
         #iterate over the distances in the map...
@@ -72,10 +75,12 @@ class BoidUtils:
             # to iterate over known partitions for which it does not interact....
             edge_dist = distance_map[key]
             # compare the edge distance to influence radius of the current boid
-            if 0<edge_dist and edge_dist <= range:#  if the edge dist = 0 ==> it is itself so exclude....
+            if 0<edge_dist and edge_dist <= ranger:#  if the edge dist = 0 ==> it is itself so exclude....
                 count += 1
                 #calculate current separation distance direction and weight by edge distance
                 pos_sum = pos_sum + ((boid.pos-boid_list[key].pos).normalized()* (1/edge_dist))
+            if  bool(max_neighbor) and count >=max_neighbor:
+                break
 
         #Now convert to force...
         if count>0:
@@ -83,9 +88,9 @@ class BoidUtils:
             steer = (pos_sum.to_len(boid.max_vel)-boid.vel).limit(boid.max_force)# Steering
             return steer*weight
         else:
-            return Vector([0,0,0])
+            return Vector.zeros(dim=boid.pos.shape())
     @staticmethod
-    def  Align(boid,boid_list,distance_map,weight,range):
+    def  Align(boid,boid_list,distance_map,weight,ranger,max_neighbor=10):
         '''
         :description: calculates the weighted alignment force for a given boid based upon the boid list and distance map etc...
         :param boid: the current boid for which the calculation is being done....
@@ -96,7 +101,7 @@ class BoidUtils:
         :return: the force vector...
         '''
         # store
-        vel_sum = Vector([0,0,0])
+        vel_sum = Vector.zeros(dim=boid.vel.shape())
         count = 0
 
         #iterate over the distances in the map...
@@ -106,18 +111,20 @@ class BoidUtils:
             # to iterate over known partitions for which it does not interact....
             edge_dist = distance_map[key]
             # compare the edge distance to influence radius of the current boid
-            if 0<edge_dist and edge_dist <= range:#  if the edge dist = 0 ==> it is itself so exclude....
+            if 0<edge_dist and edge_dist <= ranger:#  if the edge dist = 0 ==> it is itself so exclude....
                 count += 1
                 #calculate current separation distance direction and weight by edge distance
                 vel_sum = vel_sum + boid_list[key].vel
-
+            if  bool(max_neighbor) and count >=max_neighbor:
+                break
         #Now convert to force...
         if count>0:
             vel_sum = vel_sum * (1/count)#convert it to an average
             steer = (vel_sum.to_len(boid.max_vel)+boid.vel).limit(boid.max_force)# Steering
             return steer*weight
         else:
-            return Vector([0,0,0])
+            return Vector.zeros(dim=boid.pos.shape())
+    #avoid boids in front view... turn...
     #=== Useful methods
     @staticmethod
     def euclidian_distance(pos_0,pos_1,modular_space=False,squared=False):
@@ -149,6 +156,7 @@ class BoidUtils:
             #returns the distance between the two n dimensional points in modular space
             return dist_vect.mag() if not squared else sum(dist_vect.apply(lambda x:x*x).components)
     @staticmethod#@timeit
+    #@deprecated(reason="This is n^2 time complexity... use calc_distance_mapV2 as it has a time complexity of 1/2 n^2 + 1/2 n")
     def calc_distance_map(list_of_positions, modular_space=False,squared=False):#Using timeit on this determined that this was the slowest part of thecode ...
         '''
         :description: uses a caching based approach to calculate a dictionaries of dictionaries containing the position distances:
@@ -181,4 +189,34 @@ class BoidUtils:
                     pass # it was added to both dictionaries above...
         #(str(c)+" " + str(len(list_of_positions)*len(list_of_positions)))
         return cache
-
+    @staticmethod#
+    @timeit
+    def calc_distance_mapV2(list_of_positions, modular_space=False,squared=False):
+        #Using timeit on this determined that this was the slowest part of thecode ... V2 is the realization that
+        #the first distance map while efficient ... was still technically O(n^2) not the more desired O([1/2]n^2 + [1/2]n)
+        #this code fixes that...
+        '''
+        :description: uses a caching based approach to calculate a dictionaries of dictionaries containing the position distances:
+                          A   to    B         dist
+                      {index:{ otherindex: distance,....},....}
+        :param list_of_positions: a list of position Vectors [Vector,Vector,...,Vector]
+        :modular_space: see euclidian_distance docstring (note this may slow down by up to a factor of 4!!!
+        squared: see euclidian_distance docstring
+        :return: (see description)
+        '''
+        cache={}# really only gets a slim asyntotic advantage...
+        for i in range(0,len(list_of_positions)):
+            #Determine if the current entry is empty if so put a new array else preserve it
+            if i not in cache:# at a certian point i takes on the value that j was ... so to prevent overriding
+                cache[i] = {}
+            #now we need to go through all the positions
+            for j in range(len(list_of_positions)-1,i,-1):
+                dist = BoidUtils.euclidian_distance(list_of_positions[i],list_of_positions[j],modular_space=modular_space,squared=squared)
+                #Now we add it to the two locations it will be A-B and B-A    --> cache[i][j] and cache[j][i]
+                cache[i][j] = dist# we know cache[i] exists so add it to that dictionary
+                #we are however not sure if cache[j] exists yet and if it does not we need to init it first (rather if there is a dictionary at key j)
+                if j not in cache:#we need to have a dictionary there to put a value... make sure not to overwrite it...
+                    cache[j]={}
+                #now we can add the distance...
+                cache[j][i] = dist
+        return cache

@@ -17,7 +17,8 @@
 from Vector import Vector
 from BoidUtils import BoidUtils
 from Boid import Boid
-
+from timeit import timeit
+import random
 #Helps create and run a boid swarm
 
 class BoidSwarm():
@@ -42,9 +43,10 @@ class BoidSwarm():
     def setup(self):
         #=== Update Rules & Boid Storage
         rv = Vector.rand# random vector generator... has config settings see Vector class
-        d = min(self.canvas_bounds.x,self.canvas_bounds.y,self.canvas_bounds.z)# make sure the random ness is contained in the space...
+        s = self.canvas_bounds.shape()
+        d = min(self.canvas_bounds.components)# make sure the random ness is contained in the space...
         #here wer are init a random posittion,velocity,acceleration
-        self.boid_list = [Boid(rv(max_range=d),rv(max_range=32),rv(max_range=3)) for i in range(self.initial_quantity)]
+        self.boid_list = [Boid(rv(max_range=d,dim=s),rv(max_range=32,dim=s),rv(max_range=3,dim=s)) for i in range(self.initial_quantity)]
     #========= RUN
     def update_boid_positions(self):
         '''
@@ -55,10 +57,13 @@ class BoidSwarm():
         #           which defeats the purpose ... easier to do it here
         positions_list = [boid.pos for boid in self.boid_list]
         # O(n^2) so slow!!!
-        distance_maps= BoidUtils.calc_distance_map(positions_list,modular_space=self.canvas_bounds,squared=False)
+        distance_maps= BoidUtils.calc_distance_mapV2(positions_list,modular_space=False,squared=False)# using modular space = 2x slower
+        #distance_maps = BoidUtils.calc_distance_map(positions_list, modular_space=self.canvas_bounds,squared=False)# distance
         #For each boid have it update its position using its distance map as well as a ref to the boid list and canvas bounds
+
         for i in range(0,len(self.boid_list)):
             self.boid_list[i].update_position(self.boid_list,distance_maps[i],self.canvas_bounds)
+
     def draw_swarm(self,tkinter_canvas):
         '''
         :description: draws the boid swarm to the canvas by calling the draw method for each boid (passing the canvas)
@@ -83,8 +88,9 @@ class BoidSwarm():
         :param pos_vector: a Vector containing the position of a new boid
         '''
         rv = Vector.rand  # random vector generator... has config settings see Vector class
-        self.boid_list.add(Boid(pos_vector,rv(max_range=32),rv(max_range=3)))
-    def delete_boid(self,id=False,index=False,random=False):
+        s = self.canvas_bounds.shape()
+        self.boid_list.append(Boid(pos_vector,rv(max_range=32,dim=s),rv(max_range=3,dim=s)))
+    def delete_boid(self,id=False,index=False,rand=False):
         '''
         :description: deletes a boid based on the supplied criteria by id,index,random (may pass one kew word arg at a time)
         :param id:   coresponding to the UUID property of each boid O(n) worst case
@@ -92,7 +98,7 @@ class BoidSwarm():
         :param random: if set to True will delete a random boid O(n) worst case
         '''
         #handle error
-        if (not id) and (not index) and not(random):
+        if (not id) and (not index) and not(rand):
             raise BaseException("No arguments were passed")
         #Case: DELETE ID
         if bool(id):
@@ -107,7 +113,7 @@ class BoidSwarm():
                     del self.boid_list[i]
                     break
         #Case: DELETE RANDOM
-        elif(bool(random)):
+        elif(bool(rand)):
             r = random.randint(0,len(self.boid_list)-1)
             del self.boid_list[r]
 
