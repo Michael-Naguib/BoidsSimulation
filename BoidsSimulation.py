@@ -13,7 +13,7 @@
 from tkinter import *
 from BoidSwarm import BoidSwarm
 from Vector import Vector
-from timeit import timeit
+from retimeit import timeit
 
 #main program
 if __name__ == "__main__":
