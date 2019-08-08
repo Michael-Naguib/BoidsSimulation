@@ -189,8 +189,7 @@ class BoidUtils:
                     pass # it was added to both dictionaries above...
         #(str(c)+" " + str(len(list_of_positions)*len(list_of_positions)))
         return cache
-    @staticmethod#
-    @timeit
+    @staticmethod#@timeit
     def calc_distance_mapV2(list_of_positions, modular_space=False,squared=False):
         #Using timeit on this determined that this was the slowest part of thecode ... V2 is the realization that
         #the first distance map while efficient ... was still technically O(n^2) not the more desired O([1/2]n^2 + [1/2]n)
