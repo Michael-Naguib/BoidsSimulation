@@ -19,7 +19,7 @@ import pickle
 from open3d import open3d # <-- Time Lost here: 3 WEEKS Why: weird installation procedure for open3d .... what worked: manually delete open3d in\
 # in the python site packages and reinstall using an admin conda command prompt ... also the docs i read for this were totally wack... but it worked on my old pc
 # idk why ... i must have installed a previous version where those docs were valid!
-
+import random
 import time
 print(" Finished Imports ... reading file")
 #Settings
@@ -52,6 +52,29 @@ pcd.colors = open3d.utility.Vector3dVector([[0,0,0] for i in range(0,len(positio
 render_option = vis.get_render_option()
 render_option.point_size = 5#0.01
 
+# Create a way to adjust the color of the points by their velocity
+frameColors = []
+print("Precomputing Colors")
+#Add one extra because the first frame is init....
+frameColors.append(open3d.utility.Vector3dVector([[0,0,0] for i in range(0,len(positionFrameHistory[0]))]))
+for i in range(1,len(positionFrameHistory)):
+    #For each frame
+    if i==1:
+        frameColors.append(open3d.utility.Vector3dVector([[0,0,0] for i in range(0,len(positionFrameHistory[0]))]))
+    else:
+        colors = []
+        for j in range(len(positionFrameHistory[i])):
+            #Get the velocity
+            c = list(map(lambda x: x[0]-x[1],list(zip(positionFrameHistory[i][j],positionFrameHistory[i-1][j]))))
+            #Normalize it
+
+            l = math.sqrt(sum([n*n for n in c]))
+            nc = [n/l for n in c]
+            colors.append(nc)
+        frameColors.append(open3d.utility.Vector3dVector(colors))
+
+
+
 
 
 #precompute
@@ -63,6 +86,7 @@ for i in range(1,len(positionFrameHistory)):
 
 
     pcd.points = positionFrameHistory[i]
+    pcd.colors = frameColors[i]
     vis.update_geometry()
     if to_reset_view_point:
         vis.reset_view_point(True)
