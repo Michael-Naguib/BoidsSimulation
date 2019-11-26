@@ -12,7 +12,7 @@ from open3d import open3d
 import time
 
 class VisualizeSwarm():
-    def __init__(self,frameDelay=0.0,box=None,pointSize=5):
+    def __init__(self,frameDelay=0.0,box=None,pointSize=5,addSphereAtOrigin=True):
         '''
         :description:       init the visualization code for vectors in 3d space with color
         :param frameDelay:  an extra delay to add between frames
@@ -36,6 +36,11 @@ class VisualizeSwarm():
             mesh_box = open3d.geometry.TriangleMesh.create_box(width=box[0], height=box[1], depth=box[1])
             wireBox = open3d.geometry.LineSet.create_from_triangle_mesh(mesh_box)
             self.vis.add_geometry(wireBox)
+        if addSphereAtOrigin:
+            mesh_sphere = open3d.geometry.TriangleMesh.create_sphere(radius=20.0)
+            mesh_sphere.compute_vertex_normals()
+            mesh_sphere.paint_uniform_color([0.1, 0.1, 0.7])
+            self.vis.add_geometry(mesh_sphere)
 
         #TODO: WARNING THIS LINE MAY CAUSE AN ERROR --> here I excluded setting the first frame as I did in view_sim.py
         #      and do not know why I did then ... if it errors in a weird way ... check this first....

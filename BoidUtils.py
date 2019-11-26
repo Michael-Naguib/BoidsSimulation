@@ -12,6 +12,7 @@
 from Vector import Vector
 import numpy as np
 import math
+import random
 class BoidUtils:
     def __init__(self):
         pass
@@ -83,7 +84,9 @@ class BoidUtils:
             # otherwise
             # calculate current separation distance direction and weight by edge distance
             edge_dist = distances[indx]
-            sep_norm = np.subtract(boid.pos,boids[neighbors[indx]].pos) * (1/math.pow(edge_dist,2))#TODO: catch div by zero...
+            sep_norm = np.subtract(boid.pos,boids[neighbors[indx]].pos) * (1/math.pow(edge_dist if edge_dist!=0 else random.random(),2))# Catch divide by zero errors by inroducing a small random value
+            # since the two boids overlap exactly ... introduce some small uncertianty in the distance ... interesting ... this makes sense from a practical programatic perspective...
+            # unvertianty in the location of an item at small scales makes sense ... Heisenburg uncertianty?
             pos_sum = np.add(pos_sum,sep_norm*boids[neighbors[indx]].mass)
 
         # If there were no force updates return 0 vect
@@ -113,7 +116,7 @@ class BoidUtils:
             if distances[indx]> distance:
                 continue# Goto the next
             # otherwise
-            vel_sum = np.add(vel_sum,distances[indx]*(1/boids[neighbors[indx]]))
+            vel_sum = np.add(vel_sum,distances[indx]*(1/boids[neighbors[indx]].mass))
         # If there were no force updates return 0 vect
         if count==0:
             return vel_sum
