@@ -10,12 +10,117 @@
 
 #imports
 from Vector import Vector
-from timeit import timeit
-import multiprocessing as mp
-#from deprecated import deprecated
+import numpy as np
+import math
 class BoidUtils:
     def __init__(self):
         pass
+    @staticmethod
+    def absoluteValsFromRelative(relValues,maxValue):
+        '''
+        :description:        Compute absolute values given a relative set of values and a maximim:
+                             i.e rescale the weights according to size up to the max
+
+                             normalizedVect(relValues)*maxValue
+        :param relWeights:   the values to convert to absolute weights [1,1,1] & max=5 ==> [5,5,5]
+        :param maxWeight:    the value to scale by
+        :return: the absolute values
+        '''
+        # Each value becomes its fraction of the average
+        s = sum(relValues)
+        assert(s!=0)
+        absoluteValues = [relValue*maxValue*(1/s) for relValue in relValues]
+        return absoluteValues
+
+    @staticmethod
+    def cohereForce(boid,boids,neighbors,distances,distance,weight,dim=3):
+        '''
+        :description:       Calculates the coherence force update for the boids sim for a particular boid
+        :param boids:       a list of all the boids
+        :param neighbors:   a list of indicies of the neighbors of the boid (implicit) we are computing for
+        :param distances:   the distances coresponding to that boid to the other nearest boids...
+        :param distance:    the max distance for which this rule is valid
+        :param weight:      the relative strength of this force...
+        :param dim:         the dimension for the vectors...
+        :return:            vector representing the force update
+        '''
+        pos_sum = np.zeros(dim)
+        count = 0
+        # For every Neighbor:
+        for indx in range(len(neighbors)):
+            # Check to make sure it meets the distance requirements
+            if distances[indx]> distance:
+                continue# Goto the next
+            # otherwise
+            pos_sum = np.add(pos_sum,boids[neighbors[indx]].pos*(1/boids[neighbors[indx]].mass))
+        # If there were no force updates return 0 vect
+        if count==0:
+            return pos_sum
+        # otherwise
+        target = pos_sum*(1/count)
+        steer = np.subtract(np.subtract(target,boid.pos),boid.vel)
+        return steer*weight
+
+    @staticmethod
+    def seperateForce(boid,boids,neighbors,distances,distance,weight,dim=3):
+        '''
+        :description:       Calculates the seperation force update for the boids sim for a particular boid
+        :param boids:       a list of all the boids
+        :param neighbors:   a list of indicies of the neighbors of the boid (implicit) we are computing for
+        :param distances:   the distances coresponding to that boid to the other nearest boids...
+        :param distance:    the max distance for which this rule is valid
+        :param weight:      the relative strength of this force...
+        :param dim:         the dimension for the vectors...
+        :return:            vector representing the force update
+        '''
+        pos_sum = np.zeros(dim)
+        count = 0
+        # For every Neighbor:
+        for indx in range(len(neighbors)):
+            # Check to make sure it meets the distance requirements
+            if distances[indx]> distance:
+                continue# Goto the next
+            # otherwise
+            # calculate current separation distance direction and weight by edge distance
+            edge_dist = distances[indx]
+            sep_norm = np.subtract(boid.pos,boids[neighbors[indx]].pos) * (1/math.pow(edge_dist,2))#TODO: catch div by zero...
+            pos_sum = np.add(pos_sum,sep_norm*boids[neighbors[indx]].mass)
+
+        # If there were no force updates return 0 vect
+        if count==0:
+            return pos_sum
+        # otherwise
+        target = pos_sum*(1/count)
+        steer =  np.subtract(target,boid.vel)
+        return steer*weight
+    @staticmethod
+    def alignForce(boid,boids,neighbors,distances,distance,weight,dim=3):
+        '''
+        :description:       Calculates the alignment force update for the boids sim for a particular boid
+        :param boids:       a list of all the boids
+        :param neighbors:   a list of indicies of the neighbors of the boid (implicit) we are computing for
+        :param distances:   the distances coresponding to that boid to the other nearest boids...
+        :param distance:    the max distance for which this rule is valid
+        :param weight:      the relative strength of this force...
+        :param dim:         the dimension for the vectors...
+        :return:            vector representing the force update
+        '''
+        vel_sum = np.zeros(dim)
+        count = 0
+        # For every Neighbor:
+        for indx in range(len(neighbors)):
+            # Check to make sure it meets the distance requirements
+            if distances[indx]> distance:
+                continue# Goto the next
+            # otherwise
+            vel_sum = np.add(vel_sum,distances[indx]*(1/boids[neighbors[indx]]))
+        # If there were no force updates return 0 vect
+        if count==0:
+            return vel_sum
+        # otherwise
+        target = vel_sum*(1/count)
+        steer = np.add(target,boid.vel)
+        return steer*weight
     #=== Predefined Update rules! these may be used withine the BoidSwarm ... custom rules can be added...
     @staticmethod
     def Cohere(boid,boid_list,distance_map,weight,ranger,max_neighbor=10):

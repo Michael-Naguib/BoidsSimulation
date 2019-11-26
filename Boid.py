@@ -6,10 +6,12 @@
 - @University of Tulsa
 - Description: this file holds the code for the basic structure of a boid... the info it contains
 '''
+#imports
+import numpy as np
 
 # The basic structure for storing information about a boid
 class Boid():
-    def __init__(self,pos,vel,acel,mass=1.0,color='black'):
+    def __init__(self,pos,vel,acel,mass=1.0,color=(0,0,0)):
         '''
         :description: Creates a Boid (https://www.red3d.com/cwr/boids/)
                       (side note! I just figured out pycharm can add in docstrings! first time using these... fairly useful!)
@@ -22,14 +24,13 @@ class Boid():
         '''
         #======= BASIC BOID SIMULATION INFO
         # Position, Velocity, Acceleration, & mass Information:
-        self.pos = pos
-        self.vel = vel
-        self.acel = acel
+        self.pos = np.array(pos)
+        self.vel = np.array(vel)
+        self.acel = np.array(acel)
         self.mass = mass
 
         # Display Settings
         self.color=color # The color of the boid see __init__ parameter color description
-        self.scale=1     # The scale to draw the boid! note this influences the screen bounds as it cant be drawn offscreen...
         #========= BOID INFO
         # Descriptive information
         self.type=None  # specifies a type of boid (i.e there may be different interacting swarms)
