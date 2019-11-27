@@ -11,13 +11,13 @@ import numpy as np
 
 # The basic structure for storing information about a boid
 class Boid():
-    def __init__(self,pos,vel,acel,mass=1.0,color=(0,0,0)):
+    def __init__(self,pos,vel,accel,mass=1.0,color=(0,0,0)):
         '''
         :description: Creates a Boid (https://www.red3d.com/cwr/boids/)
                       (side note! I just figured out pycharm can add in docstrings! first time using these... fairly useful!)
         :param pos:     is the initial position of the boid
         :param vel:     is the initial velocity of the boid
-        :param acel:    is the initial velocity of the boid
+        :param accel:   is the initial acceleration of the boid
         :param mass:    is the initial mass of the boid; default=1 ==> no effect
         :param color:   is a tuple of three integers specifying an rgb color of the boid's drawing example
                         (255,255,255); default = black
@@ -26,7 +26,7 @@ class Boid():
         # Position, Velocity, Acceleration, & mass Information:
         self.pos = np.array(pos)
         self.vel = np.array(vel)
-        self.acel = np.array(acel)
+        self.accel = np.array(accel)
         self.mass = mass
 
         # Display Settings
@@ -41,5 +41,5 @@ class Boid():
         '''
         pos = (str(self.pos) + "            ")[0:13]# limits to 13 characters...
         vel = (str(self.vel)+ "            ")[0:13]
-        acel = (str(self.acel)+ "            ")[0:13]
-        return "Pos:{0}, Vel:{1}, Acel:{2}, Type:{4}, Color:{5}".format(pos,vel,acel,self.type,self.color)
+        accel = (str(self.accel)+ "            ")[0:13]
+        return "Pos:{0}, Vel:{1}, Accel:{2}, Type:{3}, Color:{4}".format(pos,vel,accel,self.type,self.color)

@@ -33,6 +33,13 @@ class BoidUtils:
         absoluteValues = [relValue*maxValue*(1/s) for relValue in relValues]
         return absoluteValues
     @staticmethod
+    def limitVect(vect,mag):
+        vmag = np.linalg.norm(vect)
+        if vmag>mag:
+            return (mag/vmag)*vect
+        else:
+            return vect
+    @staticmethod
     def cohereForce(boid,boids,neighbors,distances,distance,weight,dim=3):
         '''
         :description:       Calculates the coherence force update for the boids sim for a particular boid
@@ -78,6 +85,7 @@ class BoidUtils:
         '''
         pos_sum = np.zeros(dim)
         count = 0
+        mass_sum=0
         # For every Neighbor:
         for indx in range(len(neighbors)):
             # Check to make sure it meets the distance requirements
@@ -89,15 +97,17 @@ class BoidUtils:
             sep_norm = np.subtract(boid.pos,boids[neighbors[indx]].pos)* (1/(edge_dist if edge_dist!=0 else random.random()))# Catch divide by zero errors by inroducing a small random value
             # since the two boids overlap exactly ... introduce some small uncertianty in the distance ... interesting ... this makes sense from a practical programatic perspective...
             # uncertainty in the location of an item at small scales makes sense ... Heisenburg uncertianty?
-            pos_sum = np.subtract(pos_sum,sep_norm)#*boids[neighbors[indx]].mass)
+            mass = boids[neighbors[indx]].mass
+            pos_sum = np.add(pos_sum,sep_norm*mass)
             count+=1
-
+            mass_sum+=mass
         # If there were no force updates return 0 vect
         if count==0:
             return pos_sum
         # otherwise
-        target = pos_sum*(1/count)
-        steer =  np.subtract(target,boid.vel)
+
+        target = pos_sum*(1/mass_sum)
+        steer = np.subtract(target,boid.vel)
         return steer*weight
     @staticmethod
     def alignForce(boid,boids,neighbors,distances,distance,weight,dim=3):
