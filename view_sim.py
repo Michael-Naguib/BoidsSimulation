@@ -26,7 +26,7 @@ print(" Finished Imports ... reading file")
 timeDelay = 0.02 # 0.5=half second ... used to space out each frame in the playback
 
 #Read the file
-positionFrameHistory = pickle.load(open("position.dat","rb"))
+positionFrameHistory = pickle.load(open("sim.dat","rb"))
 print("Finished Reading the file ... Starting Playback")
 
 HEIGHT = 600.0

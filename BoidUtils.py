@@ -9,7 +9,6 @@
 '''
 
 #imports
-from Vector import Vector
 import numpy as np
 import math
 import random
