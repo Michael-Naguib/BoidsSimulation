@@ -71,12 +71,12 @@ class BoidUtils:
         if count==0:
             return pos_sum
         # otherwise: compute the cohere force...
-        target = pos_sum*(1/mass_sum)
+        target = np.subtract(pos_sum*(1/mass_sum),boid.pos)
         # Normalize the target and set it to the magnitue to max velocity
         target_mag = np.linalg.norm(target)
         # If the magnutude of target is zero then do nothing...
         target = target*(max_vel/target_mag) if target_mag!=0 else target
-        steer = np.subtract(np.subtract(target,boid.pos),boid.vel)
+        steer = np.subtract(target,boid.vel)
         # Limit the acceleration
         steer = BoidUtils.limitVect(steer,max_accel)
         return steer
