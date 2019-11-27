@@ -25,6 +25,7 @@ import VisualizeSqarm                       # Code for visualizing the swarm usi
 import Boid                                 # Code for a basic boid
 import BoidUtils                            # Utilities for the simulation
 import pickle                               # Code for serializing and saving python objects
+import colorsys                             # For converting colors...
 print("Finished Importing Deps") if LOG else None
 
 
@@ -34,35 +35,35 @@ if __name__ == "__main__":
     BOID_SCALE = 5       # Specifies the size of the pixel to render for each boid
     VISUALIZE = True     # If set to True the simulation is displayed
     PRECOMPUTE = False   # Determines whether the simulation should be precomputed then replayed
-    TIME_STEP = 0.1      # The change in time to consider when using Euler's Method for approximating the kinematics
+    TIME_STEP = 0.3      # The change in time to consider when using Euler's Method for approximating the kinematics
     MAX_TIME_SEC = 45    # Specify the ammount of time to run the simulation for ...
     FRAME_DELAY = 0.02 if PRECOMPUTE else 0  # Specify a frame delay (useful when precomputing is used)
-    MODULO_WRAP = False  # If true wrap positions by computing the modulo by the world bounds ... (WARN: will overide wall force)
+    MODULO_WRAP = False   # If true wrap positions by computing the modulo by the world bounds ... (WARN: will overide wall force)
     SHOW_ORIGIN=  True   # If true will put a ball at the origin
     VIEW_ARC = 2*math.pi # The perceptual field of view of the boid TODO: Implement this
 
     # Height,Width,Depth Specifies the size of the dimensions of the simulation
-    HEIGHT = 100
+    HEIGHT = 500
     WIDTH = HEIGHT#round(HEIGHT)# * 1.6180339) # Pick nice aspect ratio by using phi= THE GOLDEN RATIO (one of my favorite numbers)
     DEPTH = WIDTH
     DIMENSIONS = [HEIGHT,WIDTH,DEPTH]
 
-    BOID_QUANTITY= 100       # The number of boids in the simulation
+    BOID_QUANTITY= 200       # The number of boids in the simulation
     NEIGHBOR_QUERY_QUANT = 6 # The maximum number of neighbors each boid should consider ... in the wild
                              # starlings which exhibit flocking behavior only consider 6 of their neighbors
 
     # Bound Kinematics in the simulation
-    MAX_FORCE = 9.81        # Specify the maximum (magnitude) force that can ever be exerted in the simulation
-    MAX_ACCEL = MAX_FORCE       # Specify the maximum (magnitude) acceleration that can be achieved in the acceleration
-    MAX_VEL = math.pow(MAX_ACCL)    # Limit the velocity (magnitude)
-    WALL_FORCE = (1/3)*math.sqrt(MAX_FORCE)  # Special Force exempt from MAX_FORCE Restriction to bound the simulation ...
-                            # which grows in proportion to the distance squared deviated from the bounds!
+    MAX_FORCE = 3*9.81                    # Specify the maximum (magnitude) force that can ever be exerted in the simulation
+    MAX_ACCEL = MAX_FORCE               # Specify the maximum (magnitude) acceleration that can be achieved in the acceleration
+    MAX_VEL = math.pow(MAX_ACCEL,2)     # Limit the velocity (magnitude)
+    WALL_FORCE = MAX_FORCE              # Special Force exempt from MAX_FORCE Restriction to bound the simulation ...
+                                        # which grows in proportion to the distance squared deviated from the bounds!
     BOUNDS = [MAX_ACCEL,MAX_FORCE,MAX_VEL]
 
     # Specify the Rule Weights and Distances: Cohere Seperate Align
-    MAX_RANGE = np.linalg.norm(DIMENSIONS)       # Specify the max distance for the ranges (i.e range 0.5 ==> 0.5* MAX_DIST)
+    MAX_RANGE = min(DIMENSIONS)                  # Specify the max distance for the ranges (i.e range 0.5 ==> 0.5* MAX_DIST)
     REL_RANGES = [3,1,2]                         # Specify the Relative distances of each rule
-    REL_RULE_WEIGHTS = [1,6,1]                   # Specify the Relative weights of each Rule
+    REL_RULE_WEIGHTS = [2,2,1]                   # Specify the Relative weights of each Rule
 
     # Specify a function that takes in a boid and returns the color for that boid: A complex function could color the
     # boid by its acceleration or velocity ...
@@ -70,29 +71,35 @@ if __name__ == "__main__":
         return (0,0,0)
     COLOR_FUNCTION = black
 
+    # Generate the list of rules for the forces: Cohere,Seperate,Align
+    FORCES = [
+        BoidUtils.BoidUtils.cohereForce,
+        BoidUtils.BoidUtils.seperateForce,
+        BoidUtils.BoidUtils.alignForce
+    ]
+
     # ==================================================================================================================
-    #Checks
+    # Checks
     assert(NEIGHBOR_QUERY_QUANT<BOID_QUANTITY)
-    assert(len(REL_RULE_WEIGHTS)==len(REL_RANGES)==len(DIMENSIONS))
+    assert(len(REL_RULE_WEIGHTS)==len(REL_RANGES)==len(FORCES))
     # ==================================================================================================================
 
     # Generate the initial state of the boids ...
     boids = []
     for i in range(BOID_QUANTITY):
         # Init a random random velocity for each dimension: consider positive and negative velocities where
-        # each component is always less than any of the other components... * a dampening factor...
+        # each component is always less than any of the other components...
         randVel = [ (1-2*random.random())*(1/len(DIMENSIONS))*math.sqrt(MAX_VEL) for i in range(len(DIMENSIONS))]
         # Init a random random Acceleration for each dimension: consider positive and negative accelerations where
-        # each component is always less than any of the other components... * a dampening factor...is added
+        # each component is always less than any of the other components...
         randAccel = [(1-2*random.random())*(1/len(DIMENSIONS))*math.sqrt(MAX_ACCEL) for i in range(len(DIMENSIONS))]
-        # init a random position in the worldspace
+        # Init a random position
         randPos = [random.random()*DIMENSIONS[i] for i in range(len(DIMENSIONS))]
         # Create the boid
+        # (IMPLICIT in construction) Use the default mass & none type
         b = Boid.Boid(randPos,randVel,randAccel)
         # Set its color
         b.color = COLOR_FUNCTION(b)
-
-        # Use the default mass & none type
         # Append the boid
         boids.append(b)
 
@@ -109,11 +116,13 @@ if __name__ == "__main__":
     if VISUALIZE and not PRECOMPUTE:
         vis = VisualizeSqarm.VisualizeSwarm(frameDelay=FRAME_DELAY,box=DIMENSIONS,pointSize=BOID_SCALE,addSphereAtOrigin=SHOW_ORIGIN)
 
+
     #===================================================================================================================
     # Save the start time of the simulation...
     startTime = time.time()
     print("Beginning Simulation & Running for {0}s".format(MAX_TIME_SEC)) if LOG else None
     print("Precomputing the simulation") if LOG and PRECOMPUTE else None
+    # Run the simulation until the desired duration is reached
     while time.time()-startTime < MAX_TIME_SEC:
         #===== Compute the KD tree
         # Get the positions of the boids: (ORDER SPECIFIC)
@@ -122,36 +131,44 @@ if __name__ == "__main__":
         tree = KDTree(positions)
         # Query the Distances and neighbors for every boid (ORDER SPECIFIC)
         for indx in range(len(boids)):
-            #TODO: technically we should construct 3 KD trees but we can get away with constructing only one
-            # and querying based off the max distance then checking the distances to ensure they meet the dist
-            # criteria for the other functions...
+            # We could construct 3 KD trees ... one for each force but we can get away with constructing only one
+            # and querying based off the max distance used of all the forces then checking the distances to ensure they
+            # meet the dist criteria for the other force functions
+            # For the current agent (position) query a limited number of neighbors within the max of the ranges
             dist,loc = tree.query(positions[indx],k=NEIGHBOR_QUERY_QUANT,distance_upper_bound = max(absolute_ranges))
             # Missing neighbors are specified using infinity ... remove them
+            # TODO: check docs to see if after u hit one inf the rest are ... could improve complexity cost within
+            #       category by truncating instead of iterating over the rest...
             loc = [loc[i] for i in range(len(loc)) if dist[i]!=float('inf')]
             dist = [dist[i] for i in range(len(dist)) if dist[i]!=float('inf')]
+
+            # assign the neighbors and their distances to the boid..
+            boids[indx].neighborsDist = list(zip(loc,dist))
             #===== Compute the force updates
             forceSum = np.zeros(len(DIMENSIONS))
 
-            forceSum = np.add(forceSum,
-                              BoidUtils.BoidUtils.cohereForce(boids[indx], boids, loc, dist,
-                                                              absolute_ranges[0], absolute_weights[0]))
-            forceSum = np.add(forceSum,
-                              BoidUtils.BoidUtils.seperateForce(boids[indx], boids, loc, dist,
-                                                              absolute_ranges[1], absolute_weights[1]))
-            forceSum = np.add(forceSum,
-                              BoidUtils.BoidUtils.alignForce(boids[indx], boids, loc, dist,
-                                                              absolute_ranges[2], absolute_weights[2]))
+            # Iterate over each of the different force functions calculating the updates
+            for fIndx in range(len(FORCES)):
 
-            #===== Limit the force update
-            mag = np.linalg.norm(forceSum)
-            if mag > MAX_FORCE:
-                forceSum = (MAX_FORCE/mag)*forceSum
+                forceVal = FORCES[fIndx](# Get the fIndx'th force and calculate it
+                                          boids[indx], boids, loc, dist,
+                                          absolute_ranges[fIndx],  # on the settings for the fIndx'th force
+                                          max_vel = MAX_VEL,
+                                          max_accel = MAX_ACCEL
+                                      )
+                # Weight the force and add it to the force sum
+                print(forceVal)
+                forceSum = np.add(forceSum, forceVal*absolute_weights[fIndx])
+            print("=====")
+
+
+            #===== Limit the force update (1st time)
+            forceSum = BoidUtils.BoidUtils.limitVect(forceSum,MAX_FORCE)
+
             #===== Add the bounding force
-            '''
-            This force grows in proportion to the distance^2 deviated from the bounds 
-            for each component
-            '''
             if not MODULO_WRAP:
+                # If modulo wrapping is not used then we create a wall force that grows in proportion to the distance
+                # squared deviated from the bounds of each component
                 boundForce = np.zeros(len(DIMENSIONS))
                 for compIndx in range(len(boids[indx].pos)):
                     if boids[indx].pos[compIndx] <= 0:
@@ -159,31 +176,25 @@ if __name__ == "__main__":
                     elif boids[indx].pos[compIndx] >= DIMENSIONS[compIndx]:
                         boundForce[compIndx] = -WALL_FORCE* math.pow(boids[indx].pos[compIndx]-DIMENSIONS[compIndx],2)
                 forceSum = np.add(forceSum,boundForce)
+                # ===== Limit the force update (2nd time)
+                forceSum = BoidUtils.BoidUtils.limitVect(forceSum, MAX_FORCE)
 
             #===== Euler's Method:
             # Calculate Acceleration: F=Ma sometimes XD ==> F/M = a
             accel = (1/boids[indx].mass)*forceSum
-            # limit the accel
-            accel_mag = np.linalg.norm(accel)
-            if accel_mag!=0:# make sure not div by zer0
-                accel = (MAX_ACCEL/accel_mag)*accel if accel_mag > MAX_ACCEL else accel
-            boids[indx].accel = accel
+            # Limit the acceleration
+            boids[indx].accel = BoidUtils.BoidUtils.limitVect(accel,MAX_ACCEL)
             # Calculate Velocity
             vel = np.add(boids[indx].vel,boids[indx].accel*TIME_STEP)
-            # limit the velocity
-            vel_mag = np.linalg.norm(vel)
-            if vel_mag!=0:# make sure not div by zer0
-                vel = (MAX_VEL/vel_mag)*vel if vel_mag > MAX_VEL else vel
-            boids[indx].vel = vel
+            # Limit the Velocity
+            boids[indx].vel = BoidUtils.BoidUtils.limitVect(vel,MAX_VEL)
             # Calculate the Updated position
             pos = np.add(boids[indx].pos,boids[indx].vel*TIME_STEP)
 
-            # MODULO WRAP...
+            # Modulo Wrap: wrap the boids around the world corners if desired instead of using a wall force
             if MODULO_WRAP:
                 pos = np.array([pos[i]%DIMENSIONS[i] for i in range(len(DIMENSIONS))])
             boids[indx].pos = pos
-
-
 
             #===== Update the color of the boid according to the color func...
             boids[indx].color = COLOR_FUNCTION(boids[indx])
@@ -215,27 +226,3 @@ if __name__ == "__main__":
             pickle.dump(framesData, open(str(SAVE_SIM), "wb"))
         except:
             print("ERROR saving to file") if LOG else None
-
-
-
-
-
-
-
-
-
-    # Visualize,Save,Both
-    #loop
-
-
-
-
-
-
-
-
-
-
-
-
-

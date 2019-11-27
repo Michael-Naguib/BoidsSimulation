@@ -28,6 +28,7 @@ class Boid():
         self.vel = np.array(vel)
         self.accel = np.array(accel)
         self.mass = mass
+        self.neighborsDist = None
 
         # Display Settings
         self.color=color # The color of the boid see __init__ parameter color description

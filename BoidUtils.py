@@ -40,17 +40,20 @@ class BoidUtils:
         else:
             return vect
     @staticmethod
-    def cohereForce(boid,boids,neighbors,distances,distance,weight,dim=3):
+    def cohereForce(boid,boids,neighbors,distances,distance,dim=3,max_vel=None,max_accel=None):
         '''
         :description:       Calculates the coherence force update for the boids sim for a particular boid
         :param boids:       a list of all the boids
         :param neighbors:   a list of indicies of the neighbors of the boid (implicit) we are computing for
         :param distances:   the distances coresponding to that boid to the other nearest boids...
         :param distance:    the max distance for which this rule is valid
-        :param weight:      the relative strength of this force...
+        :param max_vel:     maximum velocity
+        :param max_accel:   maximum acceleration
         :param dim:         the dimension for the vectors...
         :return:            vector representing the force update
         '''
+
+        # Pos_Sum will be a weighted sum of positions used to calculate the center of mass
         pos_sum = np.zeros(dim)
         mass_sum=0
         count = 0
@@ -58,8 +61,8 @@ class BoidUtils:
         for indx in range(len(neighbors)):
             # Check to make sure it meets the distance requirements
             if distances[indx]> distance:
-                continue# Goto the next
-            # otherwise
+                continue # Goto the next
+            # otherwise: add the position weighted by the mass to the sum
             mass = boids[neighbors[indx]].mass
             mass_sum+=mass
             pos_sum = np.add(pos_sum,boids[neighbors[indx]].pos*(1/mass))
@@ -67,19 +70,26 @@ class BoidUtils:
         # If there were no force updates return 0 vect
         if count==0:
             return pos_sum
-        # otherwise
+        # otherwise: compute the cohere force...
         target = pos_sum*(1/mass_sum)
+        # Normalize the target and set it to the magnitue to max velocity
+        target_mag = np.linalg.norm(target)
+        # If the magnutude of target is zero then do nothing...
+        target = target*(max_vel/target_mag) if target_mag!=0 else target
         steer = np.subtract(np.subtract(target,boid.pos),boid.vel)
-        return steer*weight
+        # Limit the acceleration
+        steer = BoidUtils.limitVect(steer,max_accel)
+        return steer
     @staticmethod
-    def seperateForce(boid,boids,neighbors,distances,distance,weight,dim=3):
+    def seperateForce(boid,boids,neighbors,distances,distance,dim=3,max_vel=None,max_accel=None):
         '''
         :description:       Calculates the seperation force update for the boids sim for a particular boid
         :param boids:       a list of all the boids
         :param neighbors:   a list of indicies of the neighbors of the boid (implicit) we are computing for
         :param distances:   the distances coresponding to that boid to the other nearest boids...
         :param distance:    the max distance for which this rule is valid
-        :param weight:      the relative strength of this force...
+        :param max_vel:     maximum velocity
+        :param max_accel:   maximum acceleration
         :param dim:         the dimension for the vectors...
         :return:            vector representing the force update
         '''
@@ -105,19 +115,22 @@ class BoidUtils:
         if count==0:
             return pos_sum
         # otherwise
-
         target = pos_sum*(1/mass_sum)
+        target_mag = np.linalg.norm(target)
+        target = target*(max_vel/target_mag) if target_mag!=0 else target
         steer = np.subtract(target,boid.vel)
-        return steer*weight
+        steer = BoidUtils.limitVect(steer, max_accel)
+        return steer
     @staticmethod
-    def alignForce(boid,boids,neighbors,distances,distance,weight,dim=3):
+    def alignForce(boid,boids,neighbors,distances,distance,dim=3,max_vel=None,max_accel=None):
         '''
         :description:       Calculates the alignment force update for the boids sim for a particular boid
         :param boids:       a list of all the boids
         :param neighbors:   a list of indicies of the neighbors of the boid (implicit) we are computing for
         :param distances:   the distances coresponding to that boid to the other nearest boids...
         :param distance:    the max distance for which this rule is valid
-        :param weight:      the relative strength of this force...
+        :param max_vel:     maximum velocity
+        :param max_accel:   maximum acceleration
         :param dim:         the dimension for the vectors...
         :return:            vector representing the force update
         '''
@@ -139,5 +152,9 @@ class BoidUtils:
             return vel_sum
         # otherwise
         target = vel_sum*(1/(mass_sum))
+        target_mag = np.linalg.norm(target)
+        target = target * (max_vel / target_mag) if target_mag != 0 else target
         steer = np.subtract(target,boid.vel)
-        return steer*weight
+        steer = BoidUtils.limitVect(steer, max_accel)
+        return steer
+
