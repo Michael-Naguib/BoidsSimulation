@@ -40,7 +40,31 @@ class BoidUtils:
         else:
             return vect
     @staticmethod
-    def cohereForce(boid,boids,neighbors,distances,distance,dim=3,max_vel=None,max_accel=None):
+    def inViewArc(boid,pos,arcAngle):
+        '''
+        :description: determines if a position is withine a certian arc of a boid ...
+                      if the boid's velocity is considered the reference vector ... the position
+                      is considered inside the arc if it is in +-arcAngle (i.e the left half or the right half)
+        :param boid:        boid instance
+        :param pos:         a position vector
+        :param arcAngle:    and angle 0,2PI
+        :return: Boolean
+        '''
+        # Get the angle between the the two vectors ...
+        # use a dot product ... abs(a.b) = ||a|| ||b|| cos(theta)
+        # compute a.b and mag a mag b use cos inverse...  be sure to add in a correction
+        # factor for determining which quadrent
+        adp = abs(sum([boid.vel[i]*pos[i] for i in range(len(pos))]))
+        mp = np.linalg.norm(pos)*np.linalg.norm(boid.vel)
+        if mp ==0:
+            return False
+        #Otherwise
+        theta = math.acos(adp/mp)
+        return theta <= arcAngle
+
+
+    @staticmethod
+    def cohereForce(boid,boids,neighbors,distances,distance,dim=3,max_vel=None,max_accel=None,arcView=None):
         '''
         :description:       Calculates the coherence force update for the boids sim for a particular boid
         :param boids:       a list of all the boids
@@ -60,7 +84,7 @@ class BoidUtils:
         # For every Neighbor:
         for indx in range(len(neighbors)):
             # Check to make sure it meets the distance requirements
-            if distances[indx]> distance:
+            if distances[indx]> distance and BoidUtils.inViewArc(boid,boids[indx].pos,arcView):
                 continue # Goto the next
             # otherwise: add the position weighted by the mass to the sum
             mass = boids[neighbors[indx]].mass
@@ -81,7 +105,7 @@ class BoidUtils:
         steer = BoidUtils.limitVect(steer,max_accel)
         return steer
     @staticmethod
-    def seperateForce(boid,boids,neighbors,distances,distance,dim=3,max_vel=None,max_accel=None):
+    def seperateForce(boid,boids,neighbors,distances,distance,dim=3,max_vel=None,max_accel=None,arcView=None):
         '''
         :description:       Calculates the seperation force update for the boids sim for a particular boid
         :param boids:       a list of all the boids
@@ -99,7 +123,7 @@ class BoidUtils:
         # For every Neighbor:
         for indx in range(len(neighbors)):
             # Check to make sure it meets the distance requirements
-            if distances[indx]> distance:
+            if distances[indx]> distance and BoidUtils.inViewArc(boid,boids[indx].pos,arcView):
                 continue# Goto the next
             # otherwise
             # calculate current separation distance direction and weight by edge distance
@@ -122,7 +146,7 @@ class BoidUtils:
         steer = BoidUtils.limitVect(steer, max_accel)
         return steer
     @staticmethod
-    def alignForce(boid,boids,neighbors,distances,distance,dim=3,max_vel=None,max_accel=None):
+    def alignForce(boid,boids,neighbors,distances,distance,dim=3,max_vel=None,max_accel=None,arcView=None):
         '''
         :description:       Calculates the alignment force update for the boids sim for a particular boid
         :param boids:       a list of all the boids
@@ -140,7 +164,7 @@ class BoidUtils:
         # For every Neighbor:
         for indx in range(len(neighbors)):
             # Check to make sure it meets the distance requirements
-            if distances[indx]> distance:
+            if distances[indx]> distance and BoidUtils.inViewArc(boid,boids[indx].pos,arcView):
                 continue# Goto the next
             # otherwise
             mass = boids[neighbors[indx]].mass

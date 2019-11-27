@@ -12,12 +12,9 @@ LOG=True
 # Imports
 print("Importing Deps") if LOG else None
 from scipy.spatial import KDTree as KDTree  # A library for constructing and querying a KDTree
-from numba import cuda, jit                 # An optimization library that can speed up code and even run on GPU
-from tkinter import *                       # Python's library for creating GUI
 import math                                 # Python's library for math functions etc,,,
 import random                               # Python's library for random numbers
 import tqdm                                 # A progress logger bar library for iteration etc...
-import pptk                                 # Static 3d point cloud visualization lib for large 10mil+ datapoints
 import time                                 # Python Library for time related things
 import open3d                               # A library for LIDAR point cloud visualization and so much more 1k points
 import numpy as np                          # a library for scientific computing
@@ -25,52 +22,46 @@ import VisualizeSqarm                       # Code for visualizing the swarm usi
 import Boid                                 # Code for a basic boid
 import BoidUtils                            # Utilities for the simulation
 import pickle                               # Code for serializing and saving python objects
-import colorsys                             # For converting colors...
+import sys                                  # for exiting early
 print("Finished Importing Deps") if LOG else None
 
 
 if __name__ == "__main__":
     #===================================================================================================================
-    SAVE_SIM = None      # When Specified as a string ... the sim is saved under that Name
-    BOID_SCALE = 5       # Specifies the size of the pixel to render for each boid
-    VISUALIZE = True     # If set to True the simulation is displayed
-    PRECOMPUTE = False   # Determines whether the simulation should be precomputed then replayed
-    TIME_STEP = 0.3      # The change in time to consider when using Euler's Method for approximating the kinematics
-    MAX_TIME_SEC = 45    # Specify the ammount of time to run the simulation for ...
+    #============================= SIM TYPE SETTINGS
+    SAVE_SIM = "simPlayback.dat"         # When Specified as a string ... the sim is saved under that Name
+    LOAD_SIM = False        # When Specified as a string ... the sim will be loaded from a file and played back
+    BOID_SCALE = 5          # Specifies the size of the pixel to render for each boid
+    VISUALIZE = True        # If set to True the simulation is displayed
+    PRECOMPUTE = False      # Determines whether the simulation should be precomputed then replayed
+    TIME_STEP = 0.3         # The change in time to consider when using Euler's Method for approximating the kinematics
+    MAX_TIME_SEC = 45       # Specify the ammount of time to run the simulation for ...
+    MODULO_WRAP = False     # If true wrap positions by computing the modulo by the world bounds ... (WARN: will overide wall force)
+    SHOW_ORIGIN=  True      # If true will put a ball at the origin
+    VIEW_ARC = 2*math.pi/3  # The perceptual field of view of the boid for the left and right half [0,pi]  pi==> full circle
     FRAME_DELAY = 0.02 if PRECOMPUTE else 0  # Specify a frame delay (useful when precomputing is used)
-    MODULO_WRAP = False   # If true wrap positions by computing the modulo by the world bounds ... (WARN: will overide wall force)
-    SHOW_ORIGIN=  True   # If true will put a ball at the origin
-    VIEW_ARC = 2*math.pi # The perceptual field of view of the boid TODO: Implement this
 
+    # ============================= WORLD SETTINGS
     # Height,Width,Depth Specifies the size of the dimensions of the simulation
-    HEIGHT = 500
-    WIDTH = HEIGHT#round(HEIGHT)# * 1.6180339) # Pick nice aspect ratio by using phi= THE GOLDEN RATIO (one of my favorite numbers)
+    HEIGHT = 1600
+    WIDTH = HEIGHT
     DEPTH = WIDTH
     DIMENSIONS = [HEIGHT,WIDTH,DEPTH]
 
+    # ============================= BOID SETTINGS
     BOID_QUANTITY= 200       # The number of boids in the simulation
     NEIGHBOR_QUERY_QUANT = 6 # The maximum number of neighbors each boid should consider ... in the wild
                              # starlings which exhibit flocking behavior only consider 6 of their neighbors
-
+    # ============================= BOUNDING SETTINGS
     # Bound Kinematics in the simulation
-    MAX_FORCE = 3*9.81                    # Specify the maximum (magnitude) force that can ever be exerted in the simulation
-    MAX_ACCEL = MAX_FORCE               # Specify the maximum (magnitude) acceleration that can be achieved in the acceleration
-    MAX_VEL = math.pow(MAX_ACCEL,2)     # Limit the velocity (magnitude)
-    WALL_FORCE = MAX_FORCE              # Special Force exempt from MAX_FORCE Restriction to bound the simulation ...
-                                        # which grows in proportion to the distance squared deviated from the bounds!
+    MAX_FORCE = 2*9.81                      # Specify the maximum (magnitude) force that can ever be exerted in the simulation
+    MAX_ACCEL = MAX_FORCE                   # Specify the maximum (magnitude) acceleration that can be achieved in the acceleration
+    MAX_VEL = 0.5*math.pow(MAX_ACCEL,2)     # Limit the velocity (magnitude)
+    WALL_FORCE = MAX_FORCE                  # Special Force exempt from MAX_FORCE Restriction to bound the simulation ...
+                                            # which grows in proportion to the distance squared deviated from the bounds!
     BOUNDS = [MAX_ACCEL,MAX_FORCE,MAX_VEL]
 
-    # Specify the Rule Weights and Distances: Cohere Seperate Align
-    MAX_RANGE = min(DIMENSIONS)                  # Specify the max distance for the ranges (i.e range 0.5 ==> 0.5* MAX_DIST)
-    REL_RANGES = [3,1,2]                         # Specify the Relative distances of each rule
-    REL_RULE_WEIGHTS = [2,2,1]                   # Specify the Relative weights of each Rule
-
-    # Specify a function that takes in a boid and returns the color for that boid: A complex function could color the
-    # boid by its acceleration or velocity ...
-    def black(boid):
-        return (0,0,0)
-    COLOR_FUNCTION = black
-
+    # ============================= FORCE LISTING
     # Generate the list of rules for the forces: Cohere,Seperate,Align
     FORCES = [
         BoidUtils.BoidUtils.cohereForce,
@@ -78,12 +69,36 @@ if __name__ == "__main__":
         BoidUtils.BoidUtils.alignForce
     ]
 
+    # ============================= FORCE SETTINGS
+    # Specify the Rule Weights and Distances: Cohere Seperate Align (order specified by the order in the force listing)
+    MAX_RANGE = min(DIMENSIONS)                  # Specify the max distance for the ranges (i.e range 0.5 ==> 0.5* MAX_DIST)
+    REL_RANGES = [3,1,2]                         # Specify the Relative distances of each rule
+    REL_RULE_WEIGHTS = [2,2,1]                   # Specify the Relative weights of each Rule
+
+    # ============================= COLOR SETTINGS
+    # Specify a function that takes in a boid and returns the color for that boid: A complex function could color the
+    # boid by its acceleration or velocity ...
+    def black(boid):
+        return (0,0,0)
+    COLOR_FUNCTION = black
+
     # ==================================================================================================================
     # Checks
     assert(NEIGHBOR_QUERY_QUANT<BOID_QUANTITY)
     assert(len(REL_RULE_WEIGHTS)==len(REL_RANGES)==len(FORCES))
-    # ==================================================================================================================
 
+    #===================================================================================================================
+    #                                                  Load a Simulation
+    if bool(LOAD_SIM):
+        print("Loading the simulation Data") if LOG else None
+        with open(LOAD_SIM, 'rb') as f:
+            framesData = pickle.load(f)
+            print("Loaded Data, Starting Playback")
+            vis = VisualizeSqarm.VisualizeSwarm(frameDelay=FRAME_DELAY, box=DIMENSIONS, pointSize=BOID_SCALE,addSphereAtOrigin=SHOW_ORIGIN)
+            vis.runFrames(framesData)
+        sys.exit(0)# Exit early ...
+    # ==================================================================================================================
+    #                                                  Compute a Simulation
     # Generate the initial state of the boids ...
     boids = []
     for i in range(BOID_QUANTITY):
@@ -136,14 +151,17 @@ if __name__ == "__main__":
             # meet the dist criteria for the other force functions
             # For the current agent (position) query a limited number of neighbors within the max of the ranges
             dist,loc = tree.query(positions[indx],k=NEIGHBOR_QUERY_QUANT,distance_upper_bound = max(absolute_ranges))
-            # Missing neighbors are specified using infinity ... remove them
-            # TODO: check docs to see if after u hit one inf the rest are ... could improve complexity cost within
-            #       category by truncating instead of iterating over the rest...
-            loc = [loc[i] for i in range(len(loc)) if dist[i]!=float('inf')]
-            dist = [dist[i] for i in range(len(dist)) if dist[i]!=float('inf')]
-
+            # Missing neighbors are specified using infinity ... remove them one u hit inf the rest are inf so break
+            shortLoc=[]
+            shortDist=[]
+            for i in range(len(loc)):
+                if dist[i]==float('inf'):
+                    break
+                else:
+                    shortLoc.append(loc[i])
+                    shortDist.append(dist[i])
             # assign the neighbors and their distances to the boid..
-            boids[indx].neighborsDist = list(zip(loc,dist))
+            boids[indx].neighborsDist = list(zip(shortLoc,shortDist))
             #===== Compute the force updates
             forceSum = np.zeros(len(DIMENSIONS))
 
@@ -154,12 +172,11 @@ if __name__ == "__main__":
                                           boids[indx], boids, loc, dist,
                                           absolute_ranges[fIndx],  # on the settings for the fIndx'th force
                                           max_vel = MAX_VEL,
-                                          max_accel = MAX_ACCEL
+                                          max_accel = MAX_ACCEL,
+                                          arcView = VIEW_ARC
                                       )
                 # Weight the force and add it to the force sum
-                print(forceVal)
                 forceSum = np.add(forceSum, forceVal*absolute_weights[fIndx])
-            print("=====")
 
 
             #===== Limit the force update (1st time)
@@ -224,5 +241,5 @@ if __name__ == "__main__":
         try:
             print("Saving to file named: {0}".format(SAVE_SIM)) if LOG else None
             pickle.dump(framesData, open(str(SAVE_SIM), "wb"))
-        except:
-            print("ERROR saving to file") if LOG else None
+        except BaseException as e:
+            print("ERROR saving to file: {0}".format(e)) if LOG else None
