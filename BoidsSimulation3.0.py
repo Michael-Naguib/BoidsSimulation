@@ -27,7 +27,14 @@ import BoidUtils                            # Utilities for the simulation
 import pickle                               # Code for serializing and saving python objects
 print("Finished Importing Deps") if LOG else None
 
-
+def softmax(inputList,b=1):#Calculate the softmax values for a list returning a new list
+    #inputList: a list of numbers to calculate the corresponding softmax values for
+    #b=1: a default value saying to use e as the base of exponentiation ... see this wikipedia article for info
+    #     https://en.wikipedia.org/wiki/Softmax_function
+    assert( not(len(inputList)==0))
+    expSum = sum([math.exp(inputList[i]) for i in range(0,len(inputList))])#Sum e^x_i
+    #note! could cache the exp calculations for e^x_i ... might save computationally especially if x_i is 'large'
+    return [math.exp(inputList[i])/expSum for i in range(0,len(inputList))]# x_i --> e^x_i/(sum) s
 
 if __name__ == "__main__":
     #===================================================================================================================
@@ -35,10 +42,10 @@ if __name__ == "__main__":
     BOID_SCALE = 5      # Specifies the size of the pixel to render for each boid
     VISUALIZE = True    # If set to True the simulation is displayed
     PRECOMPUTE = False   # Determines whether the simulation should be precomputed then replayed
-    TIME_STEP = 0.1    # The change in time to consider when using Euler's Method for approximating the kinematics
+    TIME_STEP = 0.2    # The change in time to consider when using Euler's Method for approximating the kinematics
     MAX_TIME_SEC = 45   # Specify the ammount of time to run the simulation for ...
     FRAME_DELAY = 0.02 if PRECOMPUTE else 0  # Specify a frame delay (useful when precomputing is used)
-    MODULO_WRAP = True # If true wrap positions by computing the modulo by the world bounds ... (WARN: will overide wall force)
+    MODULO_WRAP = False # If true wrap positions by computing the modulo by the world bounds ... (WARN: will overide wall force)
     SHOW_ORIGIN=  True # If true will put a ball at the origin
 
     # Height,Width,Depth Specifies the size of the dimensions of the simulation
@@ -48,19 +55,19 @@ if __name__ == "__main__":
     DIMENSIONS = [HEIGHT,WIDTH,DEPTH]
 
     BOID_QUANTITY= 200        # The number of boids in the simulation
-    NEIGHBOR_QUERY_QUANT = 30 # The maximum number of neighbors each boid should consider ... in the wild
+    NEIGHBOR_QUERY_QUANT = 150 # The maximum number of neighbors each boid should consider ... in the wild
                              # starlings which exhibit flocking behavior only consider 6 of their neighbors
 
     # Bound Kinematics in the simulation
-    MAX_FORCE = 3*9.81        # Specify the maximum (magnitude) force that can ever be exerted in the simulation
-    MAX_ACEL = 4*9.81         # Specify the maximum (magnitude) acceleration that can be achieved in the acceleration
-    MAX_VEL = 3*MAX_ACEL    # Limit the velocity (magnitude)
+    MAX_FORCE = 9.81        # Specify the maximum (magnitude) force that can ever be exerted in the simulation
+    MAX_ACEL = MAX_FORCE       # Specify the maximum (magnitude) acceleration that can be achieved in the acceleration
+    MAX_VEL = MAX_ACEL*MAX_ACEL    # Limit the velocity (magnitude)
     WALL_FORCE = (1/3)*math.sqrt(MAX_FORCE)  # Special Force exempt from MAX_FORCE Restriction to bound the simulation ...
                             # which grows in proportion to the distance squared deviated from the bounds!
     BOUNDS = [MAX_ACEL,MAX_FORCE,MAX_VEL]
 
     # Specify the Rule Weights and Distances: Cohere Seperate Align
-    MAX_RANGE = (1/3)*min(DIMENSIONS)             # Specify the max distance for the ranges (i.e range 0.5 ==> 0.5* MAX_DIST)
+    MAX_RANGE = 100            # Specify the max distance for the ranges (i.e range 0.5 ==> 0.5* MAX_DIST)
     REL_RANGES = [3,1,2]              # Specify the Relative distances of each rule
     REL_RULE_WEIGHTS = [1,2,1]        # Specify the Relative weights of each Rule
 
@@ -69,12 +76,14 @@ if __name__ == "__main__":
         # Colors a boid more blue if it has a higher accleration ... returns the color value
         acel = boid.acel
         mag = abs(np.linalg.norm(acel))
-        c = 1 if mag>=maxAcel else mag/maxAcel
-        return (0,c,c)
+        color = (1/mag) * acel if mag !=0 else np.zeros(len(acel))
+        #c = 1 if mag>=maxAcel else mag/maxAcel
+        return softmax(color)#(0,c,c)
     def colorByPos(boid):
-        c = [boid.pos[i]/DIMENSIONS[i] for i in range(0,len(DIMENSIONS))]
+        c = softmax([boid.pos[i]/DIMENSIONS[i] for i in range(0,len(DIMENSIONS))])
         return c
-    COLOR_FUNCTION = colorByPos#colorByAcel
+
+    COLOR_FUNCTION = colorByPos#colorByAcel#
 
     # ==================================================================================================================
     #Checks
@@ -152,6 +161,7 @@ if __name__ == "__main__":
             mag = np.linalg.norm(forceSum)
             if mag > MAX_FORCE:
                 forceSum = (MAX_FORCE/mag)*forceSum
+
             #===== Add the bounding force
             '''
             This force grows in proportion to the distance^2 deviated from the bounds 

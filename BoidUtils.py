@@ -87,7 +87,7 @@ class BoidUtils:
             sep_norm = np.subtract(boid.pos,boids[neighbors[indx]].pos) * (1/math.pow(edge_dist if edge_dist!=0 else random.random(),2))# Catch divide by zero errors by inroducing a small random value
             # since the two boids overlap exactly ... introduce some small uncertianty in the distance ... interesting ... this makes sense from a practical programatic perspective...
             # unvertianty in the location of an item at small scales makes sense ... Heisenburg uncertianty?
-            pos_sum = np.add(pos_sum,sep_norm*boids[neighbors[indx]].mass)
+            pos_sum = np.subtract(pos_sum,sep_norm*boids[neighbors[indx]].mass)
 
         # If there were no force updates return 0 vect
         if count==0:
@@ -109,6 +109,7 @@ class BoidUtils:
         :return:            vector representing the force update
         '''
         vel_sum = np.zeros(dim)
+        mass_sum=0
         count = 0
         # For every Neighbor:
         for indx in range(len(neighbors)):
@@ -116,12 +117,14 @@ class BoidUtils:
             if distances[indx]> distance:
                 continue# Goto the next
             # otherwise
-            vel_sum = np.add(vel_sum,distances[indx]*(1/boids[neighbors[indx]].mass))
+            mass = boids[neighbors[indx]].mass
+            mass_sum+=mass
+            vel_sum = np.add(vel_sum,boids[indx].vel)*mass
         # If there were no force updates return 0 vect
         if count==0:
             return vel_sum
         # otherwise
-        target = vel_sum*(1/count)
+        target = vel_sum*(1/(count*mass_sum))
         steer = np.add(target,boid.vel)
         return steer*weight
     #=== Predefined Update rules! these may be used withine the BoidSwarm ... custom rules can be added...
