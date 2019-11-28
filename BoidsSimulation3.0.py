@@ -28,35 +28,41 @@ print("Finished Importing Deps") if LOG else None
 
 if __name__ == "__main__":
     #===================================================================================================================
-    #============================= SIM TYPE SETTINGS
-    SAVE_SIM = "simPlayback.dat"         # When Specified as a string ... the sim is saved under that Name
-    LOAD_SIM = False        # When Specified as a string ... the sim will be loaded from a file and played back
+    #============================= Load/Play/Compute Settings
+    SAVE_SIM = "largesim3.dat"        # When Specified as a string ... the sim is saved under that Name
+    LOAD_SIM = "largesim3.dat"         # When Specified as a string ... the sim will be loaded from a file and played back
     BOID_SCALE = 5          # Specifies the size of the pixel to render for each boid
-    VISUALIZE = True        # If set to True the simulation is displayed
-    PRECOMPUTE = False      # Determines whether the simulation should be precomputed then replayed
-    TIME_STEP = 0.3         # The change in time to consider when using Euler's Method for approximating the kinematics
-    MAX_TIME_SEC = 45       # Specify the ammount of time to run the simulation for ...
-    MODULO_WRAP = False     # If true wrap positions by computing the modulo by the world bounds ... (WARN: will overide wall force)
     SHOW_ORIGIN=  True      # If true will put a ball at the origin
+    SHOW_BOX = True        # If true a mesh box will show the bounding borders of the simulation
+    PRECOMPUTE = True      # Determines whether the simulation should be precomputed then replayed
+    FRAME_DELAY = 0.03 if PRECOMPUTE else 0  # Specify a frame delay (useful when precomputing is used)
+    # ============================= Strictly Compute Settings
+    VISUALIZE = True        # If set to True the simulation is displayeds
+    TIME_STEP = 0.3         # The change in time to consider when using Euler's Method for approximating the kinematics
+    MAX_TIME_SEC = 5*60       # Specify the ammount of time to run the simulation for ...
+    MODULO_WRAP = False     # If true wrap positions by computing the modulo by the world bounds ... (WARN: will overide wall force)
     VIEW_ARC = 2*math.pi/3  # The perceptual field of view of the boid for the left and right half [0,pi]  pi==> full circle
-    FRAME_DELAY = 0.02 if PRECOMPUTE else 0  # Specify a frame delay (useful when precomputing is used)
 
     # ============================= WORLD SETTINGS
     # Height,Width,Depth Specifies the size of the dimensions of the simulation
-    HEIGHT = 1600
+    HEIGHT = 2000
     WIDTH = HEIGHT
     DEPTH = WIDTH
     DIMENSIONS = [HEIGHT,WIDTH,DEPTH]
 
+    #============================== Init Spawn Setting
+    MAP_DIM_FUNC = lambda i: 100        # A function that looks at the current sise of the max value for dimension
+                                        # i and returns the proper range ... for world size use DIMENSIONS[i]
+
     # ============================= BOID SETTINGS
-    BOID_QUANTITY= 200       # The number of boids in the simulation
+    BOID_QUANTITY= 800       # The number of boids in the simulation
     NEIGHBOR_QUERY_QUANT = 6 # The maximum number of neighbors each boid should consider ... in the wild
                              # starlings which exhibit flocking behavior only consider 6 of their neighbors
     # ============================= BOUNDING SETTINGS
     # Bound Kinematics in the simulation
-    MAX_FORCE = 2*9.81                      # Specify the maximum (magnitude) force that can ever be exerted in the simulation
-    MAX_ACCEL = MAX_FORCE                   # Specify the maximum (magnitude) acceleration that can be achieved in the acceleration
-    MAX_VEL = 0.5*math.pow(MAX_ACCEL,2)     # Limit the velocity (magnitude)
+    MAX_FORCE = 3*9.81                      # Specify the maximum (magnitude) force that can ever be exerted in the simulation
+    MAX_ACCEL = MAX_FORCE*4                   # Specify the maximum (magnitude) acceleration that can be achieved in the acceleration
+    MAX_VEL = 0.25*math.pow(MAX_ACCEL,2)     # Limit the velocity (magnitude)
     WALL_FORCE = MAX_FORCE                  # Special Force exempt from MAX_FORCE Restriction to bound the simulation ...
                                             # which grows in proportion to the distance squared deviated from the bounds!
     BOUNDS = [MAX_ACCEL,MAX_FORCE,MAX_VEL]
@@ -71,9 +77,9 @@ if __name__ == "__main__":
 
     # ============================= FORCE SETTINGS
     # Specify the Rule Weights and Distances: Cohere Seperate Align (order specified by the order in the force listing)
-    MAX_RANGE = min(DIMENSIONS)                  # Specify the max distance for the ranges (i.e range 0.5 ==> 0.5* MAX_DIST)
-    REL_RANGES = [3,1,2]                         # Specify the Relative distances of each rule
-    REL_RULE_WEIGHTS = [2,2,1]                   # Specify the Relative weights of each Rule
+    MAX_RANGE = 200                  # Specify the max distance for the ranges (i.e range 0.5 ==> 0.5* MAX_DIST)
+    REL_RANGES = [3.4,1,2]                         # Specify the Relative distances of each rule
+    REL_RULE_WEIGHTS = [0.15,0.5,0.35]                   # Specify the Relative weights of each Rule
 
     # ============================= COLOR SETTINGS
     # Specify a function that takes in a boid and returns the color for that boid: A complex function could color the
@@ -93,8 +99,13 @@ if __name__ == "__main__":
         print("Loading the simulation Data") if LOG else None
         with open(LOAD_SIM, 'rb') as f:
             framesData = pickle.load(f)
+            print("Precomputing the coloring and Type Conversion") if LOG else None
+            for indx in range(len(framesData)):
+                pos = open3d.utility.Vector3dVector(framesData[indx][0])
+                colors = open3d.utility.Vector3dVector(framesData[indx][1])
+                framesData[indx] = [pos, colors]
             print("Loaded Data, Starting Playback")
-            vis = VisualizeSqarm.VisualizeSwarm(frameDelay=FRAME_DELAY, box=DIMENSIONS, pointSize=BOID_SCALE,addSphereAtOrigin=SHOW_ORIGIN)
+            vis = VisualizeSqarm.VisualizeSwarm(frameDelay=FRAME_DELAY, box=(DIMENSIONS if SHOW_BOX else False), pointSize=BOID_SCALE,addSphereAtOrigin=SHOW_ORIGIN)
             vis.runFrames(framesData)
         sys.exit(0)# Exit early ...
     # ==================================================================================================================
@@ -109,7 +120,7 @@ if __name__ == "__main__":
         # each component is always less than any of the other components...
         randAccel = [(1-2*random.random())*(1/len(DIMENSIONS))*math.sqrt(MAX_ACCEL) for i in range(len(DIMENSIONS))]
         # Init a random position
-        randPos = [random.random()*DIMENSIONS[i] for i in range(len(DIMENSIONS))]
+        randPos = [random.random()*MAP_DIM_FUNC(i) for i in range(len(DIMENSIONS))]#*DIMENSIONS[i]
         # Create the boid
         # (IMPLICIT in construction) Use the default mass & none type
         b = Boid.Boid(randPos,randVel,randAccel)
@@ -125,11 +136,12 @@ if __name__ == "__main__":
     # Setup storage to save the frames of the boids ... precompute so that it is in the format that
     # Visualizer expects ...
     framesData = []
+    pickelableFrameData = []
 
     # Create the visualizer object
     vis= None
     if VISUALIZE and not PRECOMPUTE:
-        vis = VisualizeSqarm.VisualizeSwarm(frameDelay=FRAME_DELAY,box=DIMENSIONS,pointSize=BOID_SCALE,addSphereAtOrigin=SHOW_ORIGIN)
+        vis = VisualizeSqarm.VisualizeSwarm(frameDelay=FRAME_DELAY,box= (DIMENSIONS if SHOW_BOX else False),pointSize=BOID_SCALE,addSphereAtOrigin=SHOW_ORIGIN)
 
 
     #===================================================================================================================
@@ -137,8 +149,17 @@ if __name__ == "__main__":
     startTime = time.time()
     print("Beginning Simulation & Running for {0}s".format(MAX_TIME_SEC)) if LOG else None
     print("Precomputing the simulation") if LOG and PRECOMPUTE else None
-    # Run the simulation until the desired duration is reached
-    while time.time()-startTime < MAX_TIME_SEC:
+
+    # Display Progress in MS
+    pbar = None
+    pbar = tqdm.tqdm(total=MAX_TIME_SEC) if LOG else None
+    currentTime = time.time()
+    # 1 Unit of time in the progress bar
+    quantizedTime = 1#second
+    # The last time the progres bar was updated
+    prevTime = currentTime
+    # Run the simulation until the desired duration is reached: current time -start is less than the desired time
+    while currentTime-startTime < MAX_TIME_SEC:
         #===== Compute the KD tree
         # Get the positions of the boids: (ORDER SPECIFIC)
         positions = [b.pos for b in boids]
@@ -217,9 +238,13 @@ if __name__ == "__main__":
             boids[indx].color = COLOR_FUNCTION(boids[indx])
 
         # Format the data for display
-        colors = open3d.utility.Vector3dVector([b.color for b in boids])
-        pos = open3d.utility.Vector3dVector([b.pos[0:3] for b in boids])
+        p = [b.pos[0:3] for b in boids]
+        c = [b.color for b in boids]
+        colors = open3d.utility.Vector3dVector(c)
+        pos = open3d.utility.Vector3dVector(p)
         frameData = [pos,colors]
+        if bool(SAVE_SIM):
+            pickelableFrameData.append([p,c])
 
         # Visualize as soon as the data for a frame is computed
         if VISUALIZE and not PRECOMPUTE:
@@ -228,18 +253,25 @@ if __name__ == "__main__":
         if VISUALIZE and PRECOMPUTE or bool(SAVE_SIM):
             framesData.append(frameData)
 
+        # ==== Update the Time counter and progress bar...
+        currentTime = time.time()
+        if currentTime - prevTime > quantizedTime and LOG:
+            pbar.update(1)
+            prevTime = currentTime
+    pbar.close() if LOG else None
+
     # Manually destroy the window when using tick
     if VISUALIZE and not PRECOMPUTE:
         vis.destroyWindow()
     # If we wanted to precompute then we need to now run the sim
     if VISUALIZE and PRECOMPUTE:
         print("Finished Precompute Starting Simulation Playback") if LOG else None
-        vis = VisualizeSqarm.VisualizeSwarm(frameDelay=FRAME_DELAY, box=DIMENSIONS, pointSize=BOID_SCALE,addSphereAtOrigin=SHOW_ORIGIN)
+        vis = VisualizeSqarm.VisualizeSwarm(frameDelay=FRAME_DELAY, box=DIMENSIONS if SHOW_BOX else False, pointSize=BOID_SCALE,addSphereAtOrigin=SHOW_ORIGIN)
         vis.runFrames(framesData)
     # If we want to save the sim ...
     if bool(SAVE_SIM):
         try:
             print("Saving to file named: {0}".format(SAVE_SIM)) if LOG else None
-            pickle.dump(framesData, open(str(SAVE_SIM), "wb"))
+            pickle.dump(pickelableFrameData, open(str(SAVE_SIM), "wb"))
         except BaseException as e:
             print("ERROR saving to file: {0}".format(e)) if LOG else None
