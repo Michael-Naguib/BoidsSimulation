@@ -15,6 +15,9 @@ import random
 class BoidUtils:
     def __init__(self):
         pass
+
+    # ===================================================================================================================
+    # Misc. Methods for use in the simulation
     @staticmethod
     def absoluteValsFromRelative(relValues,maxValue):
         '''
@@ -60,8 +63,8 @@ class BoidUtils:
         #Otherwise
         theta = math.acos(adp/mp)
         return theta <= arcAngle
-
-
+    #===================================================================================================================
+    # Boid Force methods....
     @staticmethod
     def cohereForce(boid,boids,neighbors,distances,distance,dim=3,max_vel=None,max_accel=None,arcView=None):
         '''

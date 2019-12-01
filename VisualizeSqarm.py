@@ -1,10 +1,10 @@
 '''
-# Boid
+# Visualize Swarm
 - Code By Michael Sherif Naguib
 - license: MIT
 - Date: 11/25/19
 - @University of Tulsa
-- Description: Code to visualize a swarm
+- Description: Code to visualize a swarm using a library used to visualize point clouds....
 '''
 
 # Imports
@@ -47,9 +47,12 @@ class VisualizeSwarm():
         # Specify the point size
         render_option = self.vis.get_render_option()
         render_option.point_size = self.pointSize
-    def tick(self,frameData):
+    def tick(self,frameData,converted=False):
         '''
         :description: Visualize one frame of the data
+        :param converted:  The arrays must be converted to a special open3d type before they can be displayed
+                           if the frames are already converted then do not do a redundant conversion... can be used for
+                           efficiency purposes...
         :param frameData:
                     [
                         positionData, where both are .Vector3dVector
@@ -68,11 +71,12 @@ class VisualizeSwarm():
                         ...
                         n times for n agents
                     ]
+
         :return:  NONE
         '''
 
-        self.pcd.points = frameData[0]
-        self.pcd.colors = frameData[1]
+        self.pcd.points = open3d.utility.Vector3dVector(frameData[0]) if not converted else frameData[0]
+        self.pcd.colors = open3d.utility.Vector3dVector(frameData[1]) if not converted else frameData[1]
         self.vis.update_geometry()
 
         if self.firstFrame:
@@ -112,8 +116,18 @@ class VisualizeSwarm():
                     ]
         :return:  NONE
         '''
+        try:
+        # Pre-compute the frame conversion
+            for indx in range(len(framesData)):
+                pos = open3d.utility.Vector3dVector(list(framesData[indx][0]))
+                colors = open3d.utility.Vector3dVector(list(framesData[indx][1]))
+                framesData[indx] = [pos, colors]
+        except:
+            print(framesData[indx][1])
+
+        # Display the simulation
         for i in range(0,len(framesData)):
-            self.tick(framesData[i])
+            self.tick(framesData[i],converted=True)
         self.destroyWindow()
 
 

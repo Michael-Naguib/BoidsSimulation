@@ -28,10 +28,14 @@ class Boid():
         self.vel = np.array(vel)
         self.accel = np.array(accel)
         self.mass = mass
-        self.neighborsDist = None
+
+        # Stores the neighbor indicies and their coresponding distances...
+        self.neighbors = None
+        self.distances = None
 
         # Display Settings
         self.color=color # The color of the boid see __init__ parameter color description
+
         #========= BOID INFO
         # Descriptive information
         self.type=None  # specifies a type of boid (i.e there may be different interacting swarms)
