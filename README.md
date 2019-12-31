@@ -61,12 +61,7 @@ simulation. A live interactive version of this can be computed and played by con
 script:  ```python BoidsSimulation.py``` 
 - See the animation below
 ![Boid Sim Gif 1]( ./screenshots/BoidsSimGif.gif "Gif 1")
-![Boid Sim 1]( ./screenshots/ScreenCapture_2019-12-30-23-58-42.png "Boid Sim 2")
-![Boid Sim 2]( ./screenshots/ScreenCapture_2019-12-30-23-58-46.png "Boid Sim 2")
-![Boid Sim 3]( ./screenshots/ScreenCapture_2019-12-30-23-58-52.png "Boid Sim 3")
-![Boid Sim 4]( ./screenshots/ScreenCapture_2019-12-30-23-58-56.png "Boid Sim 4")
-![Boid Sim 5]( ./screenshots/ScreenCapture_2019-12-30-23-59-00.png "Boid Sim 5")
-![Boid Sim 6]( ./screenshots/ScreenCapture_2019-12-30-23-59-06.png "Boid Sim 6")
+
 
 
 
