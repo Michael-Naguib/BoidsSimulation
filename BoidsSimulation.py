@@ -114,7 +114,7 @@ def byMaxAcel(frameDataI):
     colors = [colorsys.hsv_to_rgb(math.sin(2*math.pi*amag/ma), 1, 1) for amag in accel]
     return colors
 
-RECOLOR_SWARM_FUNC = byPos
+RECOLOR_SWARM_FUNC = hByDevCOP
 
 # ============================= World Settings
 # Height,Width,Depth Specifies the size of the dimensions of the simulation

@@ -55,11 +55,18 @@ For this revision of the code the following choices were made
 - Descriptions of settings are provided in the file next to the declaration of the setting....
 
 ## Screenshots
-[Boid Sim 1]( https://raw.githubusercontent.com/Michael-Naguib/BoidsSimulation/tree/master/screenshots/bs3d1.png "Boid Sim 1")
-[Boid Sim 2]( https://raw.githubusercontent.com/Michael-Naguib/BoidsSimulation/tree/master/screenshots/bs3d2.png "Boid Sim 2")
-[Boid Sim 3]( https://raw.githubusercontent.com/Michael-Naguib/BoidsSimulation/tree/master/screenshots/bs3d3.png "Boid Sim 3")
-[Boid Sim 4]( https://raw.githubusercontent.com/Michael-Naguib/BoidsSimulation/tree/master/screenshots/bs3d4.png "Boid Sim 4")
-[Boid Sim 5]( https://raw.githubusercontent.com/Michael-Naguib/BoidsSimulation/tree/master/screenshots/bs3d5.png "Boid Sim 5")
+-  Here are several images of a 3k Boid Simulation Precomputed and played back at 20x speed. Here the Hue of a boid is 
+in proportion to the maximum deviation from the center of position of the swarm. A force field wall mechanism was used to bound the 
+simulation. A live interactive version of this can be computed and played by configuring ```BoidsSimulation.py``` then by interpreting the 
+script:  ```python BoidsSimulation.py``` 
+- See the animation below
+![Boid Sim Gif 1]( ./screenshots/BoidsSimGif.gif "Gif 1")
+![Boid Sim 1]( ./screenshots/ScreenCapture_2019-12-30-23-58-42.png "Boid Sim 2")
+![Boid Sim 2]( ./screenshots/ScreenCapture_2019-12-30-23-58-46.png "Boid Sim 2")
+![Boid Sim 3]( ./screenshots/ScreenCapture_2019-12-30-23-58-52.png "Boid Sim 3")
+![Boid Sim 4]( ./screenshots/ScreenCapture_2019-12-30-23-58-56.png "Boid Sim 4")
+![Boid Sim 5]( ./screenshots/ScreenCapture_2019-12-30-23-59-00.png "Boid Sim 5")
+![Boid Sim 6]( ./screenshots/ScreenCapture_2019-12-30-23-59-06.png "Boid Sim 6")
 
 
 
